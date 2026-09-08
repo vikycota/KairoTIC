@@ -16,8 +16,11 @@ CREATE TABLE Carreras (
 
 CREATE TABLE Semestres (
     Nombre               VARCHAR(50)  NOT NULL,
+    Anio                 INT          NOT NULL,
     Cantidad_de_Creditos INT          NOT NULL,
-    CONSTRAINT pk_semestres PRIMARY KEY (Nombre)
+    CONSTRAINT pk_semestres PRIMARY KEY (Nombre, Anio),
+    CONSTRAINT chk_semestre_valido CHECK (Nombre IN ('Semestre 1', 'Semestre 2')),
+    CONSTRAINT chk_anio_valido CHECK (Anio BETWEEN 1 AND 5)
 );
 
 CREATE TABLE Materias (
@@ -31,7 +34,6 @@ CREATE TABLE Materias (
         ON UPDATE CASCADE
         ON DELETE SET NULL
 );
-
 
 
 CREATE TABLE Examenes (
@@ -101,11 +103,12 @@ CREATE TABLE Tiene (
 
 CREATE TABLE Se_Organiza_En (
     Semestres_Nombre   VARCHAR(50)     NOT NULL,
+    Semestres_Anio     INT             NOT NULL,
     Materias_Nombre    VARCHAR(100)    NOT NULL,
-    CONSTRAINT pk_se_organiza_en PRIMARY KEY (Semestres_Nombre, Materias_Nombre),
+    CONSTRAINT pk_se_organiza_en PRIMARY KEY (Semestres_Nombre, Semestres_Anio, Materias_Nombre),
     CONSTRAINT fk_organiza_semestre
-        FOREIGN KEY (Semestres_Nombre)
-        REFERENCES Semestres (Nombre)
+        FOREIGN KEY (Semestres_Nombre, Semestres_Anio)
+        REFERENCES Semestres (Nombre, Anio)
         ON UPDATE CASCADE
         ON DELETE CASCADE,
     CONSTRAINT fk_organiza_materia
