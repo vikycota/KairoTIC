@@ -46,7 +46,7 @@ services:
       - backend_net
       - frontend_net
     expose:
-      - "3000"   # ajustá al puerto real de tu backend
+      - "3000"   
 
   frontend:
     build: ./frontend
@@ -57,7 +57,7 @@ services:
     networks:
       - frontend_net
     expose:
-      - "80"   # ajustá al puerto real de tu frontend (Vite, etc.)
+      - "80"   
 
   caddy:
     image: caddy:2-alpine
