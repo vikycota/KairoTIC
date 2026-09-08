@@ -57,7 +57,7 @@ services:
     networks:
       - frontend_net
     expose:
-      - "5173"   # ajustá al puerto real de tu frontend (Vite, etc.)
+      - "80"   # ajustá al puerto real de tu frontend (Vite, etc.)
 
   caddy:
     image: caddy:2-alpine
