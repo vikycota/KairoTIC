@@ -1,11 +1,15 @@
 FROM python:3.12-alpine
+
+ENV PYTHONUNBUFFERED=1
+
 WORKDIR /app
-RUN echo 'from http.server import HTTPServer, BaseHTTPRequestHandler\n\
-class Handler(BaseHTTPRequestHandler):\n\
-    def do_GET(self):\n\
-        self.send_response(200)\n\
-        self.end_headers()\n\
-        self.wfile.write(b"OK backend")\n\
-HTTPServer(("0.0.0.0", 3000), Handler).serve_forever()' > server.py
+
+RUN apk add --no-cache gcc musl-dev postgresql-dev
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY . .
+
 EXPOSE 3000
-CMD ["python", "server.py"]
+CMD ["python", "app.py"]
