@@ -46,8 +46,8 @@ def register():
         # realmente previene la inyección SQL, más allá del filtro en validaciones.py.
         cur.execute(
             """
-            INSERT INTO Personas (Email, Nombre, Apellido, Contrasena, Beca)
-            VALUES (%s, %s, %s, %s, %s)
+            INSERT INTO Personas (Email, Nombre, Apellido, Contrasena)
+            VALUES (%s, %s, %s, %s)
             """,
             (email, nombre, apellido, hashed_str, 0),
         )
