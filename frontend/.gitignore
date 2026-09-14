@@ -1,7 +1,3 @@
-secrets/
-.env
-*.env
-pgdata/
 # Logs
 logs
 *.log
