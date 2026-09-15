@@ -1,6 +1,4 @@
-"""
-Lógica de login de usuarios (tabla Personas).
-"""
+
 
 import bcrypt
 from flask import Blueprint, request, jsonify
@@ -12,7 +10,6 @@ login_bp = Blueprint("login", __name__)
 
 
 def validar_password_login(password):
-    """Para login no se recorta ni se exige longitud mínima: se compara tal cual."""
     if not isinstance(password, str) or password == "":
         raise ValidationError("El campo 'password' no puede estar vacío.")
     return password
@@ -35,8 +32,6 @@ def login():
         conn = obtener_conexion()
         cur = conn.cursor()
 
-        # Query parametrizada (%s): psycopg2 envía los valores por separado
-        # del SQL, nunca los concatena dentro del string.
         cur.execute(
             "SELECT Nombre, Apellido, Contrasena FROM Personas WHERE Email = %s",
             (email,),
@@ -44,8 +39,7 @@ def login():
         fila = cur.fetchone()
         cur.close()
 
-        # Mismo mensaje genérico si el email no existe o si la contraseña
-        # es incorrecta, para no revelar qué emails están registrados.
+
         if not fila:
             return jsonify({"error": "Email o contraseña incorrectos."}), 401
 

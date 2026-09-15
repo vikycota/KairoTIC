@@ -1,14 +1,8 @@
-"""
-Módulo de conexión a la base de datos.
-Lee las credenciales desde Docker Secrets (nunca desde variables de entorno en texto plano).
-"""
-
 import os
 import psycopg2
 
 
 def leer_secret(env_var_name):
-    """Lee el contenido de un archivo de secret montado por Docker."""
     path = os.environ.get(env_var_name)
     if not path:
         raise RuntimeError(f"Variable de entorno '{env_var_name}' no configurada.")

@@ -16,9 +16,10 @@ services:
       - ./db/init:/docker-entrypoint-initdb.d:ro
     networks:
       - backend_net
-    # No exponemos el puerto 5432 al host: solo accesible dentro de la red interna
-    expose:
-      - "5432"
+      - frontend_net
+  
+    ports:
+      - "55432:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $$(cat /run/secrets/db_user) -d $$(cat /run/secrets/db_name)"]
       interval: 10s
@@ -45,8 +46,9 @@ services:
     networks:
       - backend_net
       - frontend_net
-    expose:
-      - "3000"   
+
+    ports:
+      - "3000:3000"
 
   frontend:
     build: ./frontend
@@ -91,5 +93,5 @@ volumes:
 
 networks:
   backend_net:
-    internal: true    # la red de la DB no tiene salida a internet, solo backend↔db
+    internal: true    
   frontend_net:
