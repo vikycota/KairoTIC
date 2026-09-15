@@ -14,11 +14,17 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./db/init:/docker-entrypoint-initdb.d:ro
+    # backend_net es "internal: true" (sin salida a internet) y Docker no permite
+    # publicar puertos de un contenedor que solo está en una red interna. Por eso
+    # sumamos frontend_net acá: es lo que habilita el "ports" de abajo para dev local
+    # (pgAdmin/DBeaver). En producción, sacar frontend_net y volver a "expose".
     networks:
       - backend_net
-    # No exponemos el puerto 5432 al host: solo accesible dentro de la red interna
-    expose:
-      - "5432"
+      - frontend_net
+    # Publicado al host solo para desarrollo local (pgAdmin/DBeaver).
+    # Puerto 55432 porque el 5432 ya está tomado por un Postgres nativo en esta máquina.
+    ports:
+      - "55432:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $$(cat /run/secrets/db_user) -d $$(cat /run/secrets/db_name)"]
       interval: 10s
