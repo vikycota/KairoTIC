@@ -3,7 +3,7 @@ import { useState } from 'react'
 import eyeOpen from '../assets/openeye.png'
 import eyeClosed from '../assets/closedeye2.png'
 
-function LoginPage({ onSwitchToRegister }) {
+function LoginPage({ onLogin,onSwitchToRegister }) {
     const [mostrarPassword, setMostrarPassword] = useState(false)
     const [email, setEmail] = useState('')
     const [password, setPassword] = useState('')
@@ -25,6 +25,7 @@ function LoginPage({ onSwitchToRegister }) {
 
             if (res.ok) {
                 setMensaje({ tipo: 'exito', texto: data.message })
+                onLogin()  
             } else {
                 setMensaje({ tipo: 'error', texto: data.error })
             }
