@@ -45,8 +45,10 @@ services:
     networks:
       - backend_net
       - frontend_net
-    expose:
-      - "3000"   
+    # Publicado al host solo para desarrollo local (npm run dev / vite proxy).
+    # En producción esto debería volver a "expose" para que solo Caddy sea público.
+    ports:
+      - "3000:3000"
 
   frontend:
     build: ./frontend
