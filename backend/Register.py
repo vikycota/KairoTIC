@@ -49,7 +49,7 @@ def register():
             INSERT INTO Personas (Email, Nombre, Apellido, Contrasena)
             VALUES (%s, %s, %s, %s)
             """,
-            (email, nombre, apellido, hashed_str, 0),
+            (email, nombre, apellido, hashed_str),
         )
         conn.commit()
         cur.close()
