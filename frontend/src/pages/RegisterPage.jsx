@@ -42,15 +42,15 @@ function RegisterPage({ onSwitchToLogin }) {
     }
 
   return (
-    <main className="login-page">
-        <section className="box-login-page">
-            <img className="login-logo" src={logoKairo} alt="Logo Kairo" />
+    <main className="register-page">
+        <section className="box-register-page">
+            <img className="register-logo" src={logoKairo} alt="Logo Kairo" />
             <div>
-                <h1 className="login-title">Crea tu cuenta</h1>
-                <p className="login-subtitle">Completá tus datos para registrarte</p>
+                <h1 className="register-title">Crea tu cuenta</h1>
+                <p className="register-subtitle">Completá tus datos para registrarte</p>
             </div>
 
-            <form className="login-form" onSubmit={handleSubmit}>
+            <form className="register-form" onSubmit={handleSubmit}>
                 <div className="user-input">
                     <label> Nombre</label>
                     <input
@@ -111,14 +111,18 @@ function RegisterPage({ onSwitchToLogin }) {
                     </p>
                 )}
 
-                <button className="login-button" type="submit" disabled={enviando}>
+                <button className="register-button" type="submit" disabled={enviando}>
                     {enviando ? 'Registrando...' : 'Registrarme'}
                 </button>
             </form>
-            <div className="login-links">
-                <div className="login-links-register">
+            <div className="register-links">
+                <div className="register-links-register">
                     <p>Ya tenés cuenta?</p>
-                    <span className="login-links-separator" onClick={onSwitchToLogin}>Iniciar sesión</span>
+                    <span className="register-links-separator" onClick={onSwitchToLogin}>Iniciar sesión</span>
+                </div>
+                <div className="register-links-register">
+                    <p>Volver al inicio?</p>
+                    <span className="register-links-separator" onClick={onSwitchToLogin}>Atrás</span>
                 </div>
             </div>
         </section>

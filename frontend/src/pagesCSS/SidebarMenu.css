@@ -1,0 +1,180 @@
+.sidebar {
+  --sidebar-ancho: 240px;
+  --sidebar-ancho-colapsado: 76px;
+
+  width: var(--sidebar-ancho);
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: #ffffff;
+  border-right: 1px solid #ececec;
+  box-shadow: 4px 0 20px rgba(0, 0, 0, 0.04);
+  box-sizing: border-box;
+  padding: 20px 14px;
+  transition: width 0.2s ease;
+  flex-shrink: 0;
+}
+
+.sidebar--colapsado {
+  width: var(--sidebar-ancho-colapsado);
+  padding: 20px 12px;
+}
+
+/* --- Header --- */
+.sidebar-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 28px;
+  min-height: 36px;
+}
+
+.sidebar-logo {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+  border-radius: 8px;
+  flex-shrink: 0;
+}
+
+.sidebar-marca {
+  font-size: 15px;
+  font-weight: 700;
+  color: #3d1a78;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+  flex: 1;
+}
+
+.sidebar-toggle {
+  margin-left: auto;
+  width: 26px;
+  height: 26px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #ececec;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #7a4fc2;
+  cursor: pointer;
+  padding: 0;
+}
+
+.sidebar-toggle svg {
+  width: 14px;
+  height: 14px;
+}
+
+.sidebar--colapsado .sidebar-header {
+  flex-direction: column;
+  gap: 12px;
+}
+
+.sidebar--colapsado .sidebar-toggle {
+  margin-left: 0;
+}
+
+.sidebar-toggle:hover {
+  border-color: #c34fd6;
+  color: #c34fd6;
+}
+
+.sidebar-toggle:focus-visible {
+  outline: 2px solid #a24fd6;
+  outline-offset: 2px;
+}
+
+/* --- Navegación --- */
+.sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+}
+
+.sidebar-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 10px 12px;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  color: #555555;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.sidebar--colapsado .sidebar-item {
+  justify-content: center;
+  padding: 10px 0;
+}
+
+.sidebar-item:hover {
+  background: #f5edfb;
+  color: #3d1a78;
+}
+
+.sidebar-item:focus-visible {
+  outline: 2px solid #a24fd6;
+  outline-offset: 2px;
+}
+
+.sidebar-item--activo {
+  background: linear-gradient(90deg, #3d1a78 0%, #c34fd6 100%);
+  color: #ffffff;
+}
+
+.sidebar-item--activo:hover {
+  background: linear-gradient(90deg, #3d1a78 0%, #c34fd6 100%);
+  color: #ffffff;
+}
+
+.sidebar-icon {
+  width: 19px;
+  height: 19px;
+  flex-shrink: 0;
+}
+
+.sidebar-item-texto {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* --- Footer --- */
+.sidebar-footer {
+  border-top: 1px solid #ececec;
+  padding-top: 10px;
+  margin-top: 10px;
+}
+
+.sidebar-item--salir {
+  color: #b5455f;
+}
+
+.sidebar-item--salir:hover {
+  background: #fbe9ed;
+  color: #b5455f;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sidebar {
+    transition: none;
+  }
+}
+
+@media (max-width: 720px) {
+  .sidebar {
+    position: fixed;
+    z-index: 20;
+    left: 0;
+    top: 0;
+  }
+}
