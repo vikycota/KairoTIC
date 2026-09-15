@@ -1,7 +1,7 @@
 
 import re
 
-# ---------- Patrones ----------
+
 EMAIL_REGEX = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
 SQL_INJECTION_PATTERN = re.compile(
@@ -17,7 +17,6 @@ class ValidationError(Exception):
         super().__init__(message)
 
 
-# ---------- Validaciones de tipo ----------
 
 def validar_es_string(valor, nombre_campo):
     if not isinstance(valor, str):
@@ -40,7 +39,6 @@ def validar_longitud(valor, nombre_campo, minimo=1, maximo=255):
     return valor
 
 
-# ---------- Validaciones específicas ----------
 
 def validar_email(email):
     email = validar_no_vacio(email, "email").lower()

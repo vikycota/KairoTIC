@@ -14,15 +14,10 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./db/init:/docker-entrypoint-initdb.d:ro
-    # backend_net es "internal: true" (sin salida a internet) y Docker no permite
-    # publicar puertos de un contenedor que solo está en una red interna. Por eso
-    # sumamos frontend_net acá: es lo que habilita el "ports" de abajo para dev local
-    # (pgAdmin/DBeaver). En producción, sacar frontend_net y volver a "expose".
     networks:
       - backend_net
       - frontend_net
-    # Publicado al host solo para desarrollo local (pgAdmin/DBeaver).
-    # Puerto 55432 porque el 5432 ya está tomado por un Postgres nativo en esta máquina.
+  
     ports:
       - "55432:5432"
     healthcheck:
@@ -51,8 +46,7 @@ services:
     networks:
       - backend_net
       - frontend_net
-    # Publicado al host solo para desarrollo local (npm run dev / vite proxy).
-    # En producción esto debería volver a "expose" para que solo Caddy sea público.
+
     ports:
       - "3000:3000"
 
@@ -99,5 +93,5 @@ volumes:
 
 networks:
   backend_net:
-    internal: true    # la red de la DB no tiene salida a internet, solo backend↔db
+    internal: true    
   frontend_net:

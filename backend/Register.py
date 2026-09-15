@@ -1,6 +1,3 @@
-"""
-Lógica de registro de usuarios (tabla Personas).
-"""
 
 import bcrypt
 from flask import Blueprint, request, jsonify
@@ -41,9 +38,7 @@ def register():
         conn = obtener_conexion()
         cur = conn.cursor()
 
-        # Query parametrizada (%s): psycopg2 envía los valores por separado
-        # del SQL, nunca los concatena dentro del string. Esto es lo que
-        # realmente previene la inyección SQL, más allá del filtro en validaciones.py.
+
         cur.execute(
             """
             INSERT INTO Personas (Email, Nombre, Apellido, Contrasena)
