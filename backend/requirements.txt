@@ -1,3 +1,4 @@
 flask==3.0.3
 psycopg2-binary==2.9.9
 bcrypt==4.2.0
+flask-cors==4.0.1
