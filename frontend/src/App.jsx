@@ -2,18 +2,22 @@ import { useState } from 'react'
 import './PagesCSS/LoginPage.css'
 import './PagesCSS/RegisterPage.css'
 import './PagesCSS/SidebarMenu.css'
+import './PagesCSS/StudyPlanPage.css'
+import './App.css'
 
 
 import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
 import WeeklyPlanner from './pages/WeeklyPlanner'
 import SidebarMenu from './pages/SidebarMenu'
+import StudyPlanPage from './pages/StudyPlanPAge'
+import easteregg from './assets/easteregg.webp'
 
 function App() {
-  const [vista, setVista] = useState('login')
+  const [vista, setVista] = useState('calendario')
 
   // Pantalla de login
-  if (vista === 'login') {
+  /*if (vista === 'login') {
     return (
       <LoginPage
         onLogin={() => setVista('calendario')}
@@ -29,7 +33,7 @@ function App() {
         onSwitchToLogin={() => setVista('login')}
       />
     )
-  }
+  }*/
 
   // Aplicación después de iniciar sesión
   return (
@@ -45,20 +49,24 @@ function App() {
         {vista === 'calendario' && <WeeklyPlanner />}
 
         {vista === 'inicio' && (
-          <h1>Inicio</h1>
+          <img className="easter-egg" src={easteregg} alt="Easter Egg" />
         )}
 
+        {vista === 'plan-estudio' && <StudyPlanPage />}
+
         {vista === 'perfil' && (
-          <h1>Perfil</h1>
+          <img className="easter-egg" src={easteregg} alt="Easter Egg" />
         )}
 
         {vista === 'ajustes' && (
-          <h1>Configuración</h1>
+          <img className="easter-egg" src={easteregg} alt="Easter Egg" />
         )}
       </main>
 
     </div>
   )
+
+   
 }
 
 export default App

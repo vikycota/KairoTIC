@@ -35,6 +35,7 @@ const ICONOS = {
 const ITEMS_MENU = [
   { id: 'inicio', etiqueta: 'Inicio' },
   { id: 'calendario', etiqueta: 'Calendario' },
+  {id : 'plan-estudio', etiqueta: 'Plan de estudio'},
   { id: 'perfil', etiqueta: 'Perfil' },
   { id: 'ajustes', etiqueta: 'Configuración' },
 ]
