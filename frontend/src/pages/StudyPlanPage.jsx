@@ -1,5 +1,5 @@
-
-import { useRef } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import ImportarPlanModal from './ImportarPlanModal'
 const CATEGORIAS = [
   { id: 'basicas-comunes', nombre: 'C. Básicas comunes', color: 'cat-blue' },
   { id: 'basicas-especificas', nombre: 'C. Básicas específicas y Cs. de la Ingeniería', color: 'cat-lavender' },
@@ -96,6 +96,12 @@ const EXTRAS = [
   { nombre: 'Actividades sociales', creditos: 5 },
 ]
 
+const NOMBRES_SEMESTRE = ['Primer', 'Segundo', 'Tercer', 'Cuarto', 'Quinto', 'Sexto', 'Séptimo', 'Octavo', 'Noveno', 'Décimo']
+const COLORES = CATEGORIAS.map((c) => c.color)
+
+// Plan que se muestra mientras no se elija una carrera importada.
+const PLAN_EJEMPLO = { nombre: 'Plan de ejemplo', categorias: CATEGORIAS, semestres: SEMESTRES, extras: EXTRAS }
+
 function materiasDe(semestre, catId) {
   return semestre.materias?.filter((m) => m.cat === catId) ?? []
 }
@@ -105,12 +111,86 @@ function totalCreditos(semestre) {
   return semestre.materias.reduce((acc, m) => acc + m.creditos, 0)
 }
 
-const TOTAL_CARRERA =
-  SEMESTRES.reduce((acc, s) => acc + totalCreditos(s), 0) +
-  EXTRAS.reduce((acc, e) => acc + e.creditos, 0)
+function totalCarrera(plan) {
+  return (
+    plan.semestres.reduce((acc, s) => acc + totalCreditos(s), 0) +
+    plan.extras.reduce((acc, e) => acc + e.creditos, 0)
+  )
+}
+
+// Convierte la respuesta de GET /api/plan a la forma que dibuja la grilla.
+function planDesdeApi(data) {
+  const categorias = []
+  for (const m of data.materias) {
+    const nombre = m.categoria || 'Sin categoría'
+    if (!categorias.some((c) => c.id === nombre)) {
+      categorias.push({ id: nombre, nombre, color: COLORES[categorias.length % COLORES.length] })
+    }
+  }
+  const cantidad = Math.max(0, ...data.materias.map((m) => m.semestre || 0))
+  const semestres = Array.from({ length: cantidad }, (_, i) => ({
+    numero: i + 1,
+    nombre: NOMBRES_SEMESTRE[i],
+    materias: [],
+  }))
+  const extras = []
+  for (const m of data.materias) {
+    if (m.semestre) {
+      semestres[m.semestre - 1].materias.push({
+        cat: m.categoria || 'Sin categoría',
+        nombre: m.nombre,
+        creditos: m.creditos,
+        previas: m.previas,
+      })
+    } else {
+      extras.push({ nombre: m.nombre, creditos: m.creditos })
+    }
+  }
+  return { nombre: data.carrera, categorias, semestres, extras }
+}
 
 function StudyPlanPage() {
     const gridRef = useRef(null)
+    const [carreras, setCarreras] = useState([])
+    const [seleccion, setSeleccion] = useState('')      // '' = plan de ejemplo
+    const [planApi, setPlanApi] = useState(null)
+    const [errorPlan, setErrorPlan] = useState('')
+    const [modalAbierto, setModalAbierto] = useState(false)
+
+    function cargarCarreras() {
+      fetch('/api/carreras')
+        .then((res) => (res.ok ? res.json() : Promise.reject()))
+        .then((data) => setCarreras(data.carreras))
+        .catch(() => setCarreras([]))
+    }
+
+    useEffect(cargarCarreras, [])
+
+    useEffect(() => {
+      if (!seleccion) return
+      let vigente = true
+      fetch(`/api/plan?carrera=${encodeURIComponent(seleccion)}`)
+        .then((res) => (res.ok ? res.json() : Promise.reject()))
+        .then((data) => {
+          if (!vigente) return
+          setPlanApi(data)
+          setErrorPlan('')
+        })
+        .catch(() => vigente && setErrorPlan('No se pudo cargar el plan de esa carrera.'))
+      return () => { vigente = false }
+    }, [seleccion])
+
+    const plan = useMemo(
+      () => (seleccion && planApi?.carrera === seleccion ? planDesdeApi(planApi) : PLAN_EJEMPLO),
+      [seleccion, planApi],
+    )
+    const total = totalCarrera(plan)
+
+    function alImportar(carrera) {
+      setModalAbierto(false)
+      cargarCarreras()
+      setSeleccion(carrera)
+    }
 
     function moverPlan(direccion) {
     gridRef.current?.scrollBy({
@@ -131,7 +211,20 @@ function StudyPlanPage() {
 
             <div className="plan-header-buttons">
                 <div className="add-plan-button">
-                    <button >
+                    {carreras.length > 0 && (
+                      <select
+                        className="plan-select"
+                        value={seleccion}
+                        onChange={(e) => setSeleccion(e.target.value)}
+                        aria-label="Carrera"
+                      >
+                        <option value="">Plan de ejemplo</option>
+                        {carreras.map((c) => (
+                          <option key={c.nombre} value={c.nombre}>{c.nombre}</option>
+                        ))}
+                      </select>
+                    )}
+                    <button type="button" onClick={() => setModalAbierto(true)}>
                         Agregar plan de estudio
                     </button>
                 </div>
@@ -156,13 +249,15 @@ function StudyPlanPage() {
                 </div>
             </header>
 
+        {errorPlan && <p className="plan-error" role="alert">{errorPlan}</p>}
+
         <div className="plan-grid-wrapper" ref={gridRef}>
           <div
             className="plan-grid"
-            style={{ gridTemplateColumns: `200px repeat(${SEMESTRES.length}, minmax(150px, 1fr)) 100px` }}
+            style={{ gridTemplateColumns: `200px repeat(${plan.semestres.length}, minmax(150px, 1fr)) 100px` }}
           >
             <div className="plan-cell plan-corner">Área</div>
-            {SEMESTRES.map((s) => (
+            {plan.semestres.map((s) => (
               <div className="plan-cell plan-sem-head" key={s.numero}>
                 <span className="plan-sem-nombre">{s.nombre}</span>
                 <span className="plan-sem-creditos">{totalCreditos(s)} ECTS</span>
@@ -170,15 +265,15 @@ function StudyPlanPage() {
             ))}
             <div className="plan-cell plan-sem-head plan-resumen-head">Resumen</div>
 
-            {CATEGORIAS.map((cat) => {
-              const totalCat = SEMESTRES.reduce(
+            {plan.categorias.map((cat) => {
+              const totalCat = plan.semestres.reduce(
                 (acc, s) => acc + materiasDe(s, cat.id).reduce((a, m) => a + m.creditos, 0),
                 0
               )
               return (
                 <div className="plan-row" key={cat.id}>
                   <div className={`plan-cell plan-cat ${cat.color}`}>{cat.nombre}</div>
-                  {SEMESTRES.map((s) => (
+                  {plan.semestres.map((s) => (
                     <div className="plan-cell plan-slot" key={s.numero}>
                       {s.especial ? (
                         cat.id === 'electivas' && (
@@ -188,7 +283,11 @@ function StudyPlanPage() {
                         )
                       ) : (
                         materiasDe(s, cat.id).map((m) => (
-                          <span className={`plan-chip ${cat.color}`} key={m.nombre}>
+                          <span
+                            className={`plan-chip ${cat.color}`}
+                            key={m.nombre}
+                            title={m.previas?.length ? `Previas: ${m.previas.join(', ')}` : undefined}
+                          >
                             <span className="plan-chip-texto">{m.nombre}</span>
                             <span className="plan-chip-creditos">{m.creditos}</span>
                           </span>
@@ -204,7 +303,7 @@ function StudyPlanPage() {
         </div>
 
         <div className="plan-extras">
-          {EXTRAS.map((e) => (
+          {plan.extras.map((e) => (
             <div className="plan-extra-card" key={e.nombre}>
               <span className="plan-extra-nombre">{e.nombre}</span>
               <span className="plan-extra-creditos">{e.creditos} ECTS</span>
@@ -212,10 +311,16 @@ function StudyPlanPage() {
           ))}
           <div className="plan-extra-card plan-extra-total">
             <span className="plan-extra-nombre">Total de la carrera</span>
-            <span className="plan-extra-creditos">{TOTAL_CARRERA} ECTS</span>
+            <span className="plan-extra-creditos">{total} ECTS</span>
           </div>
         </div>
       </section>
+
+      <ImportarPlanModal
+        abierto={modalAbierto}
+        onCerrar={() => setModalAbierto(false)}
+        onImportado={alImportar}
+      />
     </main>
   )
 }

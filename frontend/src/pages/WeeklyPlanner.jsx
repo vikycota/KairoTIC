@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import '../PagesCSS/WeeklyPlanner.css'
+import '../pagesCSS/WeeklyPlanner.css'
 
 const DIAS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom']
 const HORAS = Array.from({ length: 18 }, (_, i) => 6 + i) //array de 18 hs comenzando de las 6 am hasta las 23 pm
