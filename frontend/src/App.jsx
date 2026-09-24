@@ -4,6 +4,7 @@ import './PagesCSS/RegisterPage.css'
 import './PagesCSS/SidebarMenu.css'
 import './PagesCSS/StudyPlanPage.css'
 import './App.css'
+import './PagesCSS/PlanPage.css'
 
 
 import LoginPage from './pages/LoginPage'
@@ -12,6 +13,7 @@ import WeeklyPlanner from './pages/WeeklyPlanner'
 import SidebarMenu from './pages/SidebarMenu'
 import StudyPlanPage from './pages/StudyPlanPAge'
 import easteregg from './assets/easteregg.webp'
+import PlanPage from './pages/PlanPage'
 
 function App() {
   const [vista, setVista] = useState('calendario')
@@ -54,10 +56,8 @@ function App() {
 
         {vista === 'plan-estudio' && <StudyPlanPage />}
 
-        {vista === 'perfil' && (
-          <img className="easter-egg" src={easteregg} alt="Easter Egg" />
-        )}
-
+        {vista === 'planificar' && <PlanPage />}
+          
         {vista === 'ajustes' && (
           <img className="easter-egg" src={easteregg} alt="Easter Egg" />
         )}
