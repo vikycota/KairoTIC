@@ -3,7 +3,7 @@ import '../pagesCSS/WeeklyPlanner.css'
 
 const DIAS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom']
 const HORAS = Array.from({ length: 18 }, (_, i) => 6 + i) //array de 18 hs comenzando de las 6 am hasta las 23 pm
-const COLORES = ['chip-violet', 'chip-cyan', 'chip-pink']
+const COLORES = ['chip-orange', 'chip-yellow', 'chip-teal']
 
 function getLunesDeSemana(offset) {
   const hoy = new Date()
@@ -28,10 +28,10 @@ function claveCelda(diaIndex, hora) {
 }
 
 const EVENTOS_INICIALES = {
-  '0-9': { titulo: 'Reunión de equipo', color: 'chip-violet' },
-  '1-14': { titulo: 'Gimnasio', color: 'chip-cyan' },
-  '2-11': { titulo: 'Entrega TP', color: 'chip-pink' },
-  '4-16': { titulo: 'Clase de inglés', color: 'chip-violet' },
+  '0-9': { titulo: 'Reunión de equipo', color: 'chip-teal' },
+  '1-14': { titulo: 'Gimnasio', color: 'chip-orange' },
+  '2-11': { titulo: 'Entrega TP', color: 'chip-yellow' },
+  '4-16': { titulo: 'Clase de inglés', color: 'chip-teal' },
 }
 
 function WeeklyPlanner() {

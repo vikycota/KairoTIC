@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import ImportarPlanModal from './ImportarPlanModal'
+
 const CATEGORIAS = [
   { id: 'basicas-comunes', nombre: 'C. Básicas comunes', color: 'cat-blue' },
   { id: 'basicas-especificas', nombre: 'C. Básicas específicas y Cs. de la Ingeniería', color: 'cat-lavender' },
@@ -156,6 +157,7 @@ function StudyPlanPage() {
     const [planApi, setPlanApi] = useState(null)
     const [errorPlan, setErrorPlan] = useState('')
     const [modalAbierto, setModalAbierto] = useState(false)
+    const [creditosCompletados, setCreditosCompletados] = useState({})
 
     function cargarCarreras() {
       fetch('/api/carreras')
@@ -193,11 +195,33 @@ function StudyPlanPage() {
     }
 
     function moverPlan(direccion) {
-    gridRef.current?.scrollBy({
-        left: direccion * 450,
-        behavior: 'smooth',
-    })
+      gridRef.current?.scrollBy({
+          left: direccion * 450,
+          behavior: 'smooth',
+      })
     }
+
+  function agregarCredito(nombre, maximo) {
+    setCreditosCompletados((anteriores) => {
+      const actuales = anteriores[nombre] ?? 0
+
+      return {
+        ...anteriores,
+        [nombre]: Math.min(actuales + 1, maximo)
+      }
+    })
+  }
+
+  function quitarCredito(nombre) {
+    setCreditosCompletados((anteriores) => {
+      const actuales = anteriores[nombre] ?? 0
+
+      return {
+        ...anteriores,
+        [nombre]: Math.max(actuales - 1, 0)
+      }
+    })
+  }
   return (
     <main className="plan-page">
       <section className="plan-card">
@@ -303,12 +327,39 @@ function StudyPlanPage() {
         </div>
 
         <div className="plan-extras">
-          {plan.extras.map((e) => (
-            <div className="plan-extra-card" key={e.nombre}>
-              <span className="plan-extra-nombre">{e.nombre}</span>
-              <span className="plan-extra-creditos">{e.creditos} ECTS</span>
-            </div>
-          ))}
+          {plan.extras.map((e) => {
+            const completados = creditosCompletados[e.nombre] ?? 0
+
+            return (
+              <div className="plan-extra-card" key={e.nombre}>
+                <span className="plan-extra-nombre">
+                  {e.nombre}
+                </span>
+
+                <div className="plan-extra-progreso">
+                  <span className="plan-extra-creditos">
+                    {completados}/{e.creditos} ECTS
+                  </span>
+
+                  <button
+                    type="button"
+                    className="plan-extra-button"
+                    onClick={() => agregarCredito(e.nombre, e.creditos)}
+                  >
+                    +
+                  </button>
+
+                  <button
+                    type="button"
+                    className="plan-extra-button"
+                    onClick={() => quitarCredito(e.nombre)}
+                  >
+                    -
+                  </button>
+                </div>
+              </div>
+            )
+          })}
           <div className="plan-extra-card plan-extra-total">
             <span className="plan-extra-nombre">Total de la carrera</span>
             <span className="plan-extra-creditos">{total} ECTS</span>
