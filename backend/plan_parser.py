@@ -7,7 +7,7 @@ import unicodedata
 
 from openpyxl import load_workbook
 
-MAX_SEMESTRE = 20          
+MAX_SEMESTRE = 10          # la base admite años 1-5 con 'Semestre 1' y 'Semestre 2'
 MAX_MATERIAS = 50
 MAX_CREDITOS_MATERIA = 60
 MAX_NOMBRE = 100
@@ -304,13 +304,15 @@ def _detectar_ciclo(grafo):
     return None
 
 
-def validar_plan(raw, carrera=None, existentes=None):
+def validar_plan(raw, carrera=None, existentes=None, semestres_existentes=None):
     """
     raw: resultado de leer_archivo. carrera: nombre forzado desde el formulario.
     existentes: {nombre_materia: creditos} de lo que ya hay en la base.
+    semestres_existentes: {nombre_materia: {semestres}} según Se_Organiza_En.
     """
     errores, avisos = [], []
     existentes = existentes or {}
+    semestres_existentes = semestres_existentes or {}
     existentes_lower = {n.lower(): n for n in existentes}
 
     carrera = _limpiar(carrera or raw.get("carrera") or "")
@@ -406,6 +408,20 @@ def validar_plan(raw, carrera=None, existentes=None):
     if ciclo:
         errores.append("Hay un ciclo de previas: " + " → ".join(ciclo) + ".")
 
+    # La tabla Materias solo guarda una previa por materia (Materia_Previa_Nombre).
+    for m in materias:
+        if len(m["previas"]) > 1:
+            ignoradas = ", ".join(f"«{p}»" for p in m["previas"][1:])
+            avisos.append(
+                f"Fila {m['fila']} («{m['nombre']}»): la base solo admite una previa por materia; "
+                f"se guardará «{m['previas'][0]}» y se ignorarán {ignoradas}."
+            )
+            m["previas"] = m["previas"][:1]
+
+    # La base no tiene dónde guardar la categoría de cada materia.
+    if any(m["categoria"] for m in materias):
+        avisos.append("La columna 'categoria' se lee pero no se guarda: la base de datos no tiene dónde almacenarla.")
+
     # --- 4) choques con lo que ya está en la base (otras carreras / importaciones previas)
     for m in materias:
         actuales = existentes.get(m["nombre"])
@@ -413,6 +429,13 @@ def validar_plan(raw, carrera=None, existentes=None):
             actuales = existentes[existentes_lower[m["nombre"].lower()]]
         if actuales is not None and actuales != m["creditos"]:
             avisos.append(f"«{m['nombre']}» ya existe con {actuales} créditos; se actualizará a {m['creditos']}.")
+
+        nombre_base = existentes_lower.get(m["nombre"].lower())
+        sems = semestres_existentes.get(nombre_base, set()) if nombre_base else set()
+        if sems and m["semestre"] not in sems:
+            antes = ", ".join(str(x) for x in sorted(sems))
+            despues = m["semestre"] if m["semestre"] else "sin semestre"
+            avisos.append(f"«{m['nombre']}» ya está en el semestre {antes}; se moverá a: {despues}.")
 
     resumen = {
         "materias": len(materias),

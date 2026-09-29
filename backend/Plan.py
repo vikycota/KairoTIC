@@ -22,6 +22,21 @@ def _materias_existentes(cur):
     return {nombre: creditos for nombre, creditos in cur.fetchall()}
 
 
+def _semestres_existentes(cur):
+    """{materia: {números de semestre}} según Se_Organiza_En (Anio 1 + 'Semestre 1' -> 1, 'Semestre 2' -> 2, ...)."""
+    cur.execute("SELECT Materias_Nombre, Semestres_Nombre, Semestres_Anio FROM Se_Organiza_En")
+    resultado = {}
+    for materia, nombre, anio in cur.fetchall():
+        numero = (anio - 1) * 2 + (1 if nombre == "Semestre 1" else 2)
+        resultado.setdefault(materia, set()).add(numero)
+    return resultado
+
+
+def _periodo(numero):
+    """Semestre 1..10 del archivo -> (Semestres.Nombre, Semestres.Anio) de la base."""
+    return ("Semestre 1" if numero % 2 else "Semestre 2"), (numero + 1) // 2
+
+
 def _procesar_subida(cur):
     """
     Lee el archivo del formulario (campo 'archivo') y lo valida.
@@ -41,7 +56,13 @@ def _procesar_subida(cur):
         return None, (jsonify({"error": e.message}), 400)
 
     carrera = (request.form.get("carrera") or "").strip() or None
-    return validar_plan(raw, carrera=carrera, existentes=_materias_existentes(cur)), None
+    resultado = validar_plan(
+        raw,
+        carrera=carrera,
+        existentes=_materias_existentes(cur),
+        semestres_existentes=_semestres_existentes(cur),
+    )
+    return resultado, None
 
 
 # ---------------------------------------------------------------------------
@@ -132,7 +153,7 @@ def importar():
         # Reemplaza el plan anterior de esa carrera (las materias quedan en la tabla Materias).
         cur.execute("DELETE FROM Tiene WHERE Carreras_Nombre = %s", (carrera,))
 
-        for orden, m in enumerate(materias, start=1):
+        for m in materias:
             cur.execute(
                 """
                 INSERT INTO Materias (Nombre, Cantidad_de_Creditos) VALUES (%s, %s)
@@ -141,30 +162,45 @@ def importar():
                 (m["nombre"], m["creditos"]),
             )
             cur.execute(
-                """
-                INSERT INTO Tiene (Carreras_Nombre, Materias_Nombre, Semestre_Numero, Categoria, Orden)
-                VALUES (%s, %s, %s, %s, %s)
-                """,
-                (carrera, m["nombre"], m["semestre"], m["categoria"], orden),
+                "INSERT INTO Tiene (Carreras_Nombre, Materias_Nombre) VALUES (%s, %s)",
+                (carrera, m["nombre"]),
             )
 
-        # Previas: primero se borran las de las materias del plan y luego se cargan las nuevas
-        # (las previas pueden apuntar a materias que ya existían de otro plan).
+        # Semestres: Se_Organiza_En no distingue carreras, así que se reemplaza la ubicación
+        # de cada materia del plan. Si falta la fila en Semestres se crea con los créditos del plan.
         nombres = [m["nombre"] for m in materias]
-        cur.execute("DELETE FROM Previas WHERE Materia_Nombre = ANY(%s)", (nombres,))
+        cur.execute("DELETE FROM Se_Organiza_En WHERE Materias_Nombre = ANY(%s)", (nombres,))
+        creditos_por_semestre = {}
+        for m in materias:
+            if m["semestre"]:
+                creditos_por_semestre[m["semestre"]] = creditos_por_semestre.get(m["semestre"], 0) + m["creditos"]
+        for numero, creditos in creditos_por_semestre.items():
+            nombre_sem, anio = _periodo(numero)
+            cur.execute(
+                """
+                INSERT INTO Semestres (Nombre, Anio, Cantidad_de_Creditos) VALUES (%s, %s, %s)
+                ON CONFLICT (Nombre, Anio) DO NOTHING
+                """,
+                (nombre_sem, anio, creditos),
+            )
+        for m in materias:
+            if m["semestre"]:
+                nombre_sem, anio = _periodo(m["semestre"])
+                cur.execute(
+                    "INSERT INTO Se_Organiza_En (Semestres_Nombre, Semestres_Anio, Materias_Nombre) VALUES (%s, %s, %s)",
+                    (nombre_sem, anio, m["nombre"]),
+                )
+
+        # Previa: la base guarda una sola por materia (ya se recortó en la validación).
+        # Va después de insertar todas las materias para no violar la clave foránea.
         total_previas = 0
         for m in materias:
-            for previa in m["previas"]:
-                cur.execute(
-                    "INSERT INTO Previas (Materia_Nombre, Previa_Nombre) VALUES (%s, %s)",
-                    (m["nombre"], previa),
-                )
-                total_previas += 1
-            # Columna heredada (una sola previa): se mantiene sincronizada con la primera.
+            previa = m["previas"][0] if m["previas"] else None
             cur.execute(
                 "UPDATE Materias SET Materia_Previa_Nombre = %s WHERE Nombre = %s",
-                (m["previas"][0] if m["previas"] else None, m["nombre"]),
+                (previa, m["nombre"]),
             )
+            total_previas += 1 if previa else 0
 
         conn.commit()
         cur.close()
@@ -243,23 +279,23 @@ def obtener_plan():
 
         cur.execute(
             """
-            SELECT m.Nombre, m.Cantidad_de_Creditos, t.Semestre_Numero, t.Categoria,
-                   COALESCE(
-                     ARRAY_AGG(p.Previa_Nombre ORDER BY p.Previa_Nombre)
-                       FILTER (WHERE p.Previa_Nombre IS NOT NULL),
-                     ARRAY[]::varchar[])
+            SELECT m.Nombre, m.Cantidad_de_Creditos,
+                   MIN((s.Semestres_Anio - 1) * 2 + CASE s.Semestres_Nombre WHEN 'Semestre 1' THEN 1 ELSE 2 END) AS semestre,
+                   m.Materia_Previa_Nombre
             FROM Tiene t
             JOIN Materias m ON m.Nombre = t.Materias_Nombre
-            LEFT JOIN Previas p ON p.Materia_Nombre = m.Nombre
+            LEFT JOIN Se_Organiza_En s ON s.Materias_Nombre = m.Nombre
             WHERE t.Carreras_Nombre = %s
-            GROUP BY m.Nombre, m.Cantidad_de_Creditos, t.Semestre_Numero, t.Categoria, t.Orden
-            ORDER BY t.Orden NULLS LAST, t.Semestre_Numero NULLS LAST, m.Nombre
+            GROUP BY m.Nombre, m.Cantidad_de_Creditos, m.Materia_Previa_Nombre
+            ORDER BY semestre NULLS LAST, m.Nombre
             """,
             (carrera,),
         )
+        # La base no guarda categoría por materia: se devuelve None y el front la muestra como "Sin categoría".
         materias = [
-            {"nombre": n, "creditos": c, "semestre": s, "categoria": cat, "previas": list(prev)}
-            for n, c, s, cat, prev in cur.fetchall()
+            {"nombre": n, "creditos": c, "semestre": sem, "categoria": None,
+             "previas": [prev] if prev else []}
+            for n, c, sem, prev in cur.fetchall()
         ]
         cur.close()
         return jsonify({
