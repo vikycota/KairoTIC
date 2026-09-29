@@ -8,9 +8,9 @@ const HORAS = Array.from(
 )
 
 const COLORES = [
-  'chip-violet',
-  'chip-cyan',
-  'chip-pink'
+  'chip-yellow',
+  'chip-orange',
+  'chip-teal'
 ]
 
 function claveCelda(diaIndex, hora) {

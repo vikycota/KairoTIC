@@ -3,14 +3,13 @@ import logoKairo from '../assets/logokairo.jpeg'
 
 
 const ITEMS_MENU = [
-  { id: 'inicio', etiqueta: 'Inicio' },
   { id: 'calendario', etiqueta: 'Calendario' },
   {id : 'plan-estudio', etiqueta: 'Plan de estudio'},
   { id: 'planificar', etiqueta: 'Planificar' },
   { id: 'ajustes', etiqueta: 'Configuración' },
 ]
 
-function SidebarMenu({ itemActivo = 'inicio', onSeleccionar, onCerrarSesion }) {
+function SidebarMenu({ itemActivo = 'calendario', onSeleccionar, onCerrarSesion }) {
   const [colapsado, setColapsado] = useState(() => {
     return localStorage.getItem('kairo-sidebar-colapsado') === 'true'
   })

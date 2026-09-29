@@ -217,7 +217,7 @@
   padding: 6px 8px;
   border-radius: 8px;
   font-size: 11px;
-  font-weight: 500;
+  font-weight: 600;
   border: 1px solid transparent;
 }
 
@@ -242,22 +242,22 @@
   opacity: 1;
 }
 
-.chip-violet {
-  background: rgba(138, 92, 246, 0.562);
-  border-color: rgb(76, 0, 255);
+.chip-yellow {
+  background: rgb(230, 180, 0);
+  border-color: #503900a4;
   color: #000000;
 }
 
-.chip-cyan {
-  background: rgba(56, 191, 248, 0.857);
-  border-color: rgb(0, 102, 255);
-  color: #040404;
+.chip-orange {
+  background: rgba(142, 54, 0, 0.85);
+  border-color: #3b16007d;
+  color:#020003;
 }
 
-.chip-pink {
-  background: rgba(236, 72, 154, 0.855);
-  border-color: rgb(255, 2, 124);
-  color: #050002;
+.chip-teal {
+  background: rgb(0, 136, 120);
+  border-color: #003d3783;
+  color:#000000;
 }
 
 /* --- Responsive --- */
