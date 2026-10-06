@@ -3,6 +3,32 @@ import { useState } from 'react'
 import eyeOpen from '../assets/openeye.png'
 import eyeClosed from '../assets/closedeye2.png'
 
+const CARACTERES = {
+    minusculas: 'abcdefghijkmnopqrstuvwxyz',
+    mayusculas: 'ABCDEFGHJKLMNPQRSTUVWXYZ',
+    numeros: '23456789',
+    simbolos: '!@#$%&*?-_',
+}
+
+// Contraseña aleatoria de 16 caracteres con al menos uno de cada tipo (usa el generador seguro del navegador).
+function generarPassword(largo = 16) {
+    const grupos = Object.values(CARACTERES)
+    const todos = grupos.join('')
+    const azar = (max) => {
+        const limite = Math.floor(0x100000000 / max) * max
+        const buffer = new Uint32Array(1)
+        do { crypto.getRandomValues(buffer) } while (buffer[0] >= limite)
+        return buffer[0] % max
+    }
+    const letras = grupos.map((g) => g[azar(g.length)])
+    while (letras.length < largo) letras.push(todos[azar(todos.length)])
+    for (let i = letras.length - 1; i > 0; i--) {
+        const j = azar(i + 1);
+        [letras[i], letras[j]] = [letras[j], letras[i]]
+    }
+    return letras.join('')
+}
+
 function RegisterPage({ onSwitchToLogin }) {
     const [mostrarPassword, setMostrarPassword] = useState(false)
     const [nombre, setNombre] = useState('')
@@ -103,6 +129,16 @@ function RegisterPage({ onSwitchToLogin }) {
                                 />
                         </button>
                     </div>
+                    <button
+                        type="button"
+                        className="generate-password"
+                        onClick={() => {
+                            setPassword(generarPassword())
+                            setMostrarPassword(true)
+                        }}
+                    >
+                        Generar contraseña segura
+                    </button>
                 </div>
 
                 {mensaje && (

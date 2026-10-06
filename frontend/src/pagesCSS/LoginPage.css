@@ -177,3 +177,15 @@ body {
   width: 20px;
   height: 20px;
 }
+.generate-password {
+  align-self: flex-start;
+  margin-top: 6px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: #3d1a78;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: underline;
+  cursor: pointer;
+}
