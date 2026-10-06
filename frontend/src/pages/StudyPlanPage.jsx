@@ -1,6 +1,6 @@
+
 import { useEffect, useMemo, useRef, useState } from 'react'
 import ImportarPlanModal from './ImportarPlanModal'
-
 const CATEGORIAS = [
   { id: 'basicas-comunes', nombre: 'C. Básicas comunes', color: 'cat-blue' },
   { id: 'basicas-especificas', nombre: 'C. Básicas específicas y Cs. de la Ingeniería', color: 'cat-lavender' },
@@ -11,7 +11,10 @@ const CATEGORIAS = [
   { id: 'core-curriculum', nombre: 'Core curriculum', color: 'cat-sand' },
   { id: 'cs-sociales', nombre: 'Cs. sociales', color: 'cat-slate' },
   { id: 'electivas', nombre: 'Electivas', color: 'cat-teal' },
+  { id: 'sin-categoria', nombre: 'Sin categoría', color: 'cat-slate' },
 ]
+
+
 
 const SEMESTRES = [
   { numero: 1, nombre: 'Primer', creditos: 32, materias: [
@@ -96,12 +99,106 @@ const EXTRAS = [
   { nombre: 'Pasantía', creditos: 20 },
   { nombre: 'Actividades sociales', creditos: 5 },
 ]
+const NOMBRES_SEMESTRE = [
+  '',
+  'Primer',
+  'Segundo',
+  'Tercer',
+  'Cuarto',
+  'Quinto',
+  'Sexto',
+  'Séptimo',
+  'Octavo',
+  'Noveno',
+  'Décimo',
+]
 
-const NOMBRES_SEMESTRE = ['Primer', 'Segundo', 'Tercer', 'Cuarto', 'Quinto', 'Sexto', 'Séptimo', 'Octavo', 'Noveno', 'Décimo']
+function normalizarCategoria(categoria) {
+  if (!categoria) return 'sin-categoria'
+
+  const valor = categoria.trim().toLowerCase()
+
+  // Si Ollama ya devolvió directamente el id
+  const porId = CATEGORIAS.find(
+    (cat) => cat.id.toLowerCase() === valor
+  )
+
+  if (porId) return porId.id
+
+  // Si devolvió el nombre visible
+  const porNombre = CATEGORIAS.find(
+    (cat) => cat.nombre.toLowerCase() === valor
+  )
+
+  if (porNombre) return porNombre.id
+
+  // Algunas variantes posibles
+  if (valor.includes('básicas específicas')) {
+    return 'basicas-especificas'
+  }
+
+  if (valor.includes('básicas comunes')) {
+    return 'basicas-comunes'
+  }
+
+  if (valor.includes('ingeniería aplicada')) {
+    return 'ingenieria-aplicada'
+  }
+
+  if (valor.includes('proyecto')) {
+    return 'proyecto-integrador'
+  }
+
+  if (valor.includes('informática')) {
+    return 'informatica-comunes'
+  }
+
+  if (valor.includes('social')) {
+    return 'cs-sociales'
+  }
+
+  if (valor.includes('electiv')) {
+    return 'electivas'
+  }
+
+  return 'sin-categoria'
+}
+
 const COLORES = CATEGORIAS.map((c) => c.color)
-
-// Plan que se muestra mientras no se elija una carrera importada.
 const PLAN_EJEMPLO = { nombre: 'Plan de ejemplo', categorias: CATEGORIAS, semestres: SEMESTRES, extras: EXTRAS }
+
+function totalCreditosPlan(plan) {
+  return plan.semestres.reduce((acc, s) => acc + totalCreditos(s), 0) +
+    plan.extras.reduce((acc, e) => acc + e.creditos, 0)
+}
+
+function planDesdeApi(data) {
+  const categorias = []
+  for (const materia of data.materias) {
+    const nombre = materia.categoria || 'Sin categoria'
+    if (!categorias.some((categoria) => categoria.id === nombre)) {
+      categorias.push({ id: nombre, nombre, color: COLORES[categorias.length % COLORES.length] })
+    }
+  }
+  const cantidad = Math.max(0, ...data.materias.map((materia) => materia.semestre || 0))
+  const semestres = Array.from({ length: cantidad }, (_, i) => ({
+    numero: i + 1,
+    nombre: NOMBRES_SEMESTRE[i + 1] || `Semestre ${i + 1}`,
+    materias: [],
+  }))
+  const extras = []
+  for (const materia of data.materias) {
+    if (materia.semestre) {
+      semestres[materia.semestre - 1]?.materias.push({
+        cat: materia.categoria || 'Sin categoria', nombre: materia.nombre,
+        creditos: materia.creditos, previas: materia.previas,
+      })
+    } else {
+      extras.push({ nombre: materia.nombre, creditos: materia.creditos })
+    }
+  }
+  return { nombre: data.carrera, categorias, semestres, extras }
+}
 
 function materiasDe(semestre, catId) {
   return semestre.materias?.filter((m) => m.cat === catId) ?? []
@@ -112,94 +209,118 @@ function totalCreditos(semestre) {
   return semestre.materias.reduce((acc, m) => acc + m.creditos, 0)
 }
 
-function totalCarrera(plan) {
-  return (
-    plan.semestres.reduce((acc, s) => acc + totalCreditos(s), 0) +
-    plan.extras.reduce((acc, e) => acc + e.creditos, 0)
-  )
-}
-
-// Convierte la respuesta de GET /api/plan a la forma que dibuja la grilla.
-function planDesdeApi(data) {
-  const categorias = []
-  for (const m of data.materias) {
-    const nombre = m.categoria || 'Sin categoría'
-    if (!categorias.some((c) => c.id === nombre)) {
-      categorias.push({ id: nombre, nombre, color: COLORES[categorias.length % COLORES.length] })
-    }
-  }
-  const cantidad = Math.max(0, ...data.materias.map((m) => m.semestre || 0))
-  const semestres = Array.from({ length: cantidad }, (_, i) => ({
-    numero: i + 1,
-    nombre: NOMBRES_SEMESTRE[i],
-    materias: [],
-  }))
-  const extras = []
-  for (const m of data.materias) {
-    if (m.semestre) {
-      semestres[m.semestre - 1].materias.push({
-        cat: m.categoria || 'Sin categoría',
-        nombre: m.nombre,
-        creditos: m.creditos,
-        previas: m.previas,
-      })
-    } else {
-      extras.push({ nombre: m.nombre, creditos: m.creditos })
-    }
-  }
-  return { nombre: data.carrera, categorias, semestres, extras }
-}
-
 function StudyPlanPage() {
+
+  
+  const [archivoPlan, setArchivoPlan] = useState(null)
+  const [analizandoPlan, setAnalizandoPlan] = useState(false)
+  const [planImportado, setPlanImportado] = useState(null)
+  const [semestres, setSemestres] = useState(SEMESTRES)
+  const [carrera, setCarrera] = useState('')
+  const [carreras, setCarreras] = useState([])
+  const [seleccion, setSeleccion] = useState('')
+  const [planApi, setPlanApi] = useState(null)
+  const [errorPlan, setErrorPlan] = useState('')
+  const [modalAbierto, setModalAbierto] = useState(false)
     const gridRef = useRef(null)
-    const [carreras, setCarreras] = useState([])
-    const [seleccion, setSeleccion] = useState('')      // '' = plan de ejemplo
-    const [planApi, setPlanApi] = useState(null)
-    const [errorPlan, setErrorPlan] = useState('')
-    const [modalAbierto, setModalAbierto] = useState(false)
-    const [creditosCompletados, setCreditosCompletados] = useState({})
-
-    function cargarCarreras() {
+    useEffect(() => {
       fetch('/api/carreras')
-        .then((res) => (res.ok ? res.json() : Promise.reject()))
-        .then((data) => setCarreras(data.carreras))
+        .then((res) => res.ok ? res.json() : Promise.reject())
+        .then((data) => setCarreras(data.carreras ?? []))
         .catch(() => setCarreras([]))
-    }
-
-    useEffect(cargarCarreras, [])
+    }, [])
 
     useEffect(() => {
       if (!seleccion) return
       let vigente = true
       fetch(`/api/plan?carrera=${encodeURIComponent(seleccion)}`)
-        .then((res) => (res.ok ? res.json() : Promise.reject()))
+        .then((res) => res.ok ? res.json() : Promise.reject())
         .then((data) => {
-          if (!vigente) return
-          setPlanApi(data)
-          setErrorPlan('')
+          if (vigente) { setPlanApi(data); setErrorPlan('') }
         })
         .catch(() => vigente && setErrorPlan('No se pudo cargar el plan de esa carrera.'))
       return () => { vigente = false }
     }, [seleccion])
 
-    const plan = useMemo(
-      () => (seleccion && planApi?.carrera === seleccion ? planDesdeApi(planApi) : PLAN_EJEMPLO),
-      [seleccion, planApi],
-    )
-    const total = totalCarrera(plan)
+    const plan = useMemo(() => {
+      if (seleccion && planApi?.carrera === seleccion) return planDesdeApi(planApi)
+      return seleccion ? PLAN_EJEMPLO : { nombre: carrera || 'Plan de ejemplo', categorias: CATEGORIAS, semestres, extras: EXTRAS }
+    }, [seleccion, planApi, carrera, semestres])
+    const total = totalCreditosPlan(plan)
 
-    function alImportar(carrera) {
+    function alImportar(nombre) {
       setModalAbierto(false)
-      cargarCarreras()
-      setSeleccion(carrera)
+      fetch('/api/carreras').then((res) => res.json()).then((data) => setCarreras(data.carreras ?? [])).catch(() => {})
+      setSeleccion(nombre)
     }
 
+    const [creditosCompletados, setCreditosCompletados] = useState({})
     function moverPlan(direccion) {
       gridRef.current?.scrollBy({
           left: direccion * 450,
           behavior: 'smooth',
       })
     }
+
+  async function importarPlan() {
+    if (!archivoPlan) {return}
+    setAnalizandoPlan(true)
+    try {
+      const formData = new FormData()
+      formData.append(
+        'pdf',
+        archivoPlan)
+      const respuesta = await fetch(
+        '/api/study-plan/import',
+        {
+          method: 'POST',
+          body: formData
+        }
+      )
+      const datos = await respuesta.json()
+      if (!respuesta.ok) {
+        throw new Error(
+          datos.error ??
+          'No se pudo importar el plan')}
+      setPlanImportado(datos)
+      console.log(datos)
+    } catch (error) {
+      console.error(error)
+    } finally {
+      setAnalizandoPlan(false)
+    }
+  }
+  function cancelarImportacion() {
+    setPlanImportado(null)
+  }
+  function confirmarPlan() {
+    if (!planImportado) return
+
+    setCarrera(planImportado.carrera ?? '')
+
+    const nuevosSemestres = planImportado.semestres.map((semestre) => ({
+      numero: semestre.numero,
+
+      nombre:
+        NOMBRES_SEMESTRE[semestre.numero] ??
+        `Semestre ${semestre.numero}`,
+
+      materias: semestre.materias.map((materia) => ({
+        cat: normalizarCategoria(materia.categoria),
+        codigo: materia.codigo ?? '',
+        nombre: materia.nombre ?? '',
+
+        creditos: Number(materia.creditos) || 0,
+      })),
+    }))
+
+    setSemestres(nuevosSemestres)
+    setSeleccion('')
+
+    setPlanImportado(null)
+    setArchivoPlan(null)
+  }
+
 
   function agregarCredito(nombre, maximo) {
     setCreditosCompletados((anteriores) => {
@@ -212,7 +333,7 @@ function StudyPlanPage() {
     })
   }
 
-  function quitarCredito(nombre) {
+  function quitarCredito(nombre, maximo) {
     setCreditosCompletados((anteriores) => {
       const actuales = anteriores[nombre] ?? 0
 
@@ -236,21 +357,30 @@ function StudyPlanPage() {
             <div className="plan-header-buttons">
                 <div className="add-plan-button">
                     {carreras.length > 0 && (
-                      <select
-                        className="plan-select"
-                        value={seleccion}
-                        onChange={(e) => setSeleccion(e.target.value)}
-                        aria-label="Carrera"
-                      >
+                      <select className="plan-select" value={seleccion} onChange={(e) => setSeleccion(e.target.value)} aria-label="Carrera">
                         <option value="">Plan de ejemplo</option>
-                        {carreras.map((c) => (
-                          <option key={c.nombre} value={c.nombre}>{c.nombre}</option>
-                        ))}
+                        {carreras.map((item) => <option key={item.nombre} value={item.nombre}>{item.nombre}</option>)}
                       </select>
                     )}
-                    <button type="button" onClick={() => setModalAbierto(true)}>
-                        Agregar plan de estudio
+                    <button type="button" onClick={() => setModalAbierto(true)}>Agregar plan de estudio</button>
+                    <input
+                      type="file"
+                      accept=".pdf"
+                      onChange={(e) => {
+                        setArchivoPlan(e.target.files[0])
+                      }}
+                    />
+
+                    <button
+                      type="button"
+                      onClick={importarPlan}
+                      disabled={!archivoPlan || analizandoPlan}
+                    >
+                      {analizandoPlan
+                        ? 'Analizando...'
+                        : 'Importar plan'}
                     </button>
+
                 </div>
 
                 <div className="plan-nav">
@@ -307,12 +437,8 @@ function StudyPlanPage() {
                         )
                       ) : (
                         materiasDe(s, cat.id).map((m) => (
-                          <span
-                            className={`plan-chip ${cat.color}`}
-                            key={m.nombre}
-                            title={m.previas?.length ? `Previas: ${m.previas.join(', ')}` : undefined}
-                          >
-                            <span className="plan-chip-texto">{m.nombre}</span>
+                          <span className={`plan-chip ${cat.color}`} key={m.codigo || m.nombre} title={m.previas?.length ? `Previas: ${m.previas.join(', ')}` : undefined}>
+                            <span className="plan-chip-texto">{m.codigo || m.nombre}</span>
                             <span className="plan-chip-creditos">{m.creditos}</span>
                           </span>
                         ))
@@ -352,7 +478,7 @@ function StudyPlanPage() {
                   <button
                     type="button"
                     className="plan-extra-button"
-                    onClick={() => quitarCredito(e.nombre)}
+                    onClick={() => quitarCredito(e.nombre, e.creditos)}
                   >
                     -
                   </button>
@@ -367,11 +493,113 @@ function StudyPlanPage() {
         </div>
       </section>
 
-      <ImportarPlanModal
-        abierto={modalAbierto}
-        onCerrar={() => setModalAbierto(false)}
-        onImportado={alImportar}
-      />
+      {planImportado && (
+        <div className="plan-modal-overlay">
+
+          <div className="plan-modal">
+
+            <div className="plan-modal-header">
+
+              <div>
+                <h2 className="plan-modal-title">
+                  Plan de estudio detectado
+                </h2>
+
+                <p className="plan-modal-carrera">
+                  {planImportado.carrera ?? 'Carrera no identificada'}
+                </p>
+              </div>
+
+              <button
+                type="button"
+                className="plan-modal-cerrar"
+                onClick={cancelarImportacion}
+                aria-label="Cerrar"
+              >
+                ×
+              </button>
+
+            </div>
+
+
+            <div className="plan-modal-content">
+
+              {planImportado.semestres?.map((semestre) => (
+
+                <div
+                  className="plan-modal-semestre"
+                  key={semestre.numero}
+                >
+
+                  <h3>
+                    Semestre {semestre.numero}
+                  </h3>
+
+                  <div className="plan-modal-materias">
+
+                    {semestre.materias?.map((materia, index) => (
+
+                      <div
+                        className="plan-modal-materia"
+                        key={`${semestre.numero}-${index}`}
+                      >
+
+                        <div className="plan-modal-materia-info">
+
+                          <span className="plan-modal-materia-nombre">
+                            {materia.nombre}
+                          </span>
+
+                          {materia.categoria && (
+                            <span className="plan-modal-materia-categoria">
+                              {materia.categoria}
+                            </span>
+                          )}
+
+                        </div>
+
+                        <span className="plan-modal-materia-creditos">
+                          {materia.creditos} ECTS
+                        </span>
+
+                      </div>
+
+                    ))}
+
+                  </div>
+
+                </div>
+
+              ))}
+
+            </div>
+
+
+            <div className="plan-modal-actions">
+
+              <button
+                type="button"
+                className="plan-modal-cancelar"
+                onClick={cancelarImportacion}
+              >
+                Cancelar
+              </button>
+
+              <button
+                type="button"
+                className="plan-modal-confirmar"
+                onClick={confirmarPlan}
+              >
+                Confirmar plan
+              </button>
+
+            </div>
+
+          </div>
+
+        </div>
+      )}
+      <ImportarPlanModal abierto={modalAbierto} onCerrar={() => setModalAbierto(false)} onImportado={alImportar} />
     </main>
   )
 }
