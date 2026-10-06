@@ -25,7 +25,7 @@ function LoginPage({ onLogin,onSwitchToRegister }) {
 
             if (res.ok) {
                 setMensaje({ tipo: 'exito', texto: data.message })
-                onLogin()  
+                onLogin(data.usuario)
             } else {
                 setMensaje({ tipo: 'error', texto: data.error })
             }

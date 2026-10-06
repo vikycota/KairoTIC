@@ -15,29 +15,53 @@ import SidebarMenu from './pages/SidebarMenu'
 import StudyPlanPage from './pages/StudyPlanPage'
 import easteregg from './assets/easteregg.webp'
 import PlanPage from './pages/PlanPage'
+import ProgresoPage from './pages/ProgresoPage'
 import ConfigPage from "./pages/ConfigPage"
 
 function App() {
-  const [vista, setVista] = useState('calendario')
+  const [usuario, setUsuario] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem('kairo-usuario'))
+    } catch {
+      return null
+    }
+  })
+  const [vista, setVista] = useState(usuario ? 'calendario' : 'login')
+
+  function iniciarSesion(datos) {
+    setUsuario(datos)
+    try {
+      localStorage.setItem('kairo-usuario', JSON.stringify(datos))
+    } catch { /* sin almacenamiento: la sesión dura hasta recargar */ }
+    setVista('calendario')
+  }
+
+  function cerrarSesion() {
+    setUsuario(null)
+    try {
+      localStorage.removeItem('kairo-usuario')
+    } catch { /* nada que limpiar */ }
+    setVista('login')
+  }
 
   // Pantalla de login
-  /*if (vista === 'login') {
+  if (!usuario && vista !== 'register') {
     return (
       <LoginPage
-        onLogin={() => setVista('calendario')}
+        onLogin={iniciarSesion}
         onSwitchToRegister={() => setVista('register')}
       />
     )
   }
 
   // Pantalla de registro
-  if (vista === 'register') {
+  if (!usuario) {
     return (
       <RegisterPage
         onSwitchToLogin={() => setVista('login')}
       />
     )
-  }*/
+  }
 
   // Aplicación después de iniciar sesión
   return (
@@ -46,13 +70,15 @@ function App() {
       <SidebarMenu
         itemActivo={vista}
         onSeleccionar={setVista}
-        onCerrarSesion={() => setVista('login')}
+        onCerrarSesion={cerrarSesion}
       />
 
       <main className="app-content">
         {vista === 'calendario' && <WeeklyPlanner />}
 
         {vista === 'plan-estudio' && <StudyPlanPage />}
+
+        {vista === 'progreso' && <ProgresoPage emailUsuario={usuario.email} />}
 
         {vista === 'planificar' && <PlanPage />}
           
