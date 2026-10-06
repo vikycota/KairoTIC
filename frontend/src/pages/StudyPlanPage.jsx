@@ -1,5 +1,5 @@
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import ImportarPlanModal from './ImportarPlanModal'
 const CATEGORIAS = [
   { id: 'basicas-comunes', nombre: 'C. Básicas comunes', color: 'cat-blue' },
@@ -247,6 +247,33 @@ function StudyPlanPage() {
     }, [seleccion, planApi, carrera, semestres])
     const total = totalCreditosPlan(plan)
 
+    // Busca la letra más grande con la que el tablero entra en la pantalla sin recortar nada,
+    // sin pasarse de lo que permite el ancho de las columnas (para no partir las palabras).
+    const tableroRef = useRef(null)
+    useLayoutEffect(() => {
+      const tablero = tableroRef.current
+      const pagina = tablero?.closest('.estudio-page')
+      if (!tablero || !pagina) return
+
+      function ajustar() {
+        const columnas = plan.semestres.length || 1
+        let min = 8
+        let max = Math.max(8, Math.min(18, tablero.clientWidth / columnas / 10))
+        for (let i = 0; i < 8; i++) {
+          const medio = (min + max) / 2
+          tablero.style.setProperty('--fs', `${medio}px`)
+          if (tablero.scrollHeight > tablero.clientHeight + 1) max = medio
+          else min = medio
+        }
+        tablero.style.setProperty('--fs', `${min}px`)
+      }
+
+      ajustar()
+      const observador = new ResizeObserver(ajustar)
+      observador.observe(pagina)
+      return () => observador.disconnect()
+    }, [plan])
+
     function alImportar(nombre) {
       setModalAbierto(false)
       fetch('/api/carreras').then((res) => res.json()).then((data) => setCarreras(data.carreras ?? [])).catch(() => {})
@@ -379,7 +406,12 @@ function StudyPlanPage() {
 
         {errorPlan && <p className="plan-error" role="alert">{errorPlan}</p>}
 
-        <div className="plan-tablero" style={{ '--semestres': plan.semestres.length }}>
+        <div
+          className="plan-tablero"
+          lang="es"
+          ref={tableroRef}
+          style={{ '--columnas': plan.semestres.map((s) => (s.especial ? 'minmax(0, 0.9fr)' : 'minmax(0, 1fr)')).join(' ') }}
+        >
           {plan.semestres.map((s) => (
             <section className="plan-semestre" key={s.numero}>
               <header className="plan-semestre-cabecera">

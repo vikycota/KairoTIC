@@ -13,7 +13,7 @@
 
   display: flex;
   justify-content: center;
-  align-items: stretch;
+  align-items: flex-start;
 
   background: linear-gradient(270deg, #DE6ADE, #200064d0);
 
@@ -30,6 +30,7 @@
   width: 100%;
   max-width: 1800px;
   min-height: 0;
+  max-height: 100%;   /* la tarjeta mide lo que ocupa su contenido, hasta el alto de la pantalla */
 
   background: rgb(252, 252, 252);
   border: 1px solid rgb(255, 255, 255);
@@ -126,24 +127,26 @@
    ========================= */
 
 .plan-tablero {
-  /* ocupa todo el alto sobrante; el texto escala con su tamaño */
-  flex: 1;
+  /* Mide lo que ocupa la columna más alta (sin reservar espacio vacío).
+     El tamaño de letra (--fs) lo calcula StudyPlanPage.jsx para aprovechar la pantalla. */
+  flex: 0 1 auto;
   min-height: 0;
-  container-type: size;
+  overflow: hidden;
 
   display: grid;
-  grid-template-columns: repeat(var(--semestres, 10), minmax(0, 1fr));
-  gap: clamp(4px, 0.6cqw, 10px);
+  /* --columnas: un ancho por semestre (el semestre internacional, que tiene una sola tarjeta, es más angosto) */
+  grid-template-columns: var(--columnas);
+  align-items: start;
+  gap: 8px;
 
-  padding: clamp(6px, 0.8cqw, 12px);
+  padding: 10px;
   border-radius: 16px;
   background: linear-gradient(270deg, #de6adeac, #2000647f);
+
+  font-size: var(--fs, 11px);
 }
 
 .plan-semestre {
-  /* las unidades cq* solo valen en los hijos del contenedor, por eso el tamaño va acá */
-  font-size: clamp(9px, min(0.98cqw, 2.3cqh), 16px);
-
   min-width: 0;
   min-height: 0;
 
@@ -216,6 +219,7 @@
 .estudio-chip-texto {
   min-width: 0;
   overflow-wrap: break-word;
+  hyphens: auto;   /* si hay que partir una palabra, usa guion silábico */
 }
 
 .plan-chip-creditos {
@@ -229,6 +233,7 @@
 }
 
 .plan-chip-internacional {
+  overflow-wrap: anywhere;
   justify-content: center;
 
   background: linear-gradient(90deg, #7c5cfc, #c46bef);
@@ -280,7 +285,6 @@
   }
 
   .plan-tablero {
-    container-type: inline-size;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     font-size: 13px;
   }
