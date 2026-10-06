@@ -619,3 +619,281 @@
 .plan-extra-button:hover {
   opacity: 0.85;
 }
+
+.plan-preview {
+  margin-top: 20px;
+  padding: 20px;
+
+  border-radius: 16px;
+
+  background: rgba(32, 0, 100, 0.05);
+}
+
+.plan-preview h2 {
+  font-family: 'Sora', sans-serif;
+  color: #200064;
+}
+
+.plan-preview-semestre {
+  margin-top: 18px;
+}
+
+.plan-preview-semestre h3 {
+  color: #200064a7;
+}
+
+.plan-preview-materia {
+  display: flex;
+  justify-content: space-between;
+
+  padding: 8px 0;
+
+  border-bottom: 1px solid rgba(32, 0, 100, 0.1);
+
+  font-size: 13px;
+}
+/* =========================
+   MODAL IMPORTAR PLAN
+   ========================= */
+
+.plan-modal-overlay {
+  position: fixed;
+
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+
+  z-index: 9999;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 24px;
+
+  background: rgba(20, 0, 45, 0.55);
+
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+
+  box-sizing: border-box;
+}
+
+
+.plan-modal {
+  width: 100%;
+  max-width: 760px;
+  max-height: 85vh;
+
+  display: flex;
+  flex-direction: column;
+
+  background: rgb(252, 252, 252);
+
+  border-radius: 24px;
+
+  box-shadow: 0 30px 70px rgba(0, 0, 0, 0.45);
+
+  overflow: hidden;
+}
+
+
+/* HEADER */
+
+.plan-modal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+
+  gap: 20px;
+
+  padding: 24px 26px 18px;
+
+  border-bottom: 1px solid rgba(32, 0, 100, 0.1);
+}
+
+.plan-modal-title {
+  margin: 0;
+
+  font-family: 'Sora', sans-serif;
+
+  font-size: 21px;
+  font-weight: 600;
+
+  color: #200064;
+}
+
+.plan-modal-carrera {
+  margin: 5px 0 0;
+
+  font-size: 13px;
+
+  color: #2000649c;
+}
+
+.plan-modal-cerrar {
+  width: 32px;
+  height: 32px;
+
+  flex-shrink: 0;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border: none;
+  border-radius: 8px;
+
+  background: transparent;
+
+  color: #200064;
+
+  font-size: 24px;
+
+  cursor: pointer;
+}
+
+.plan-modal-cerrar:hover {
+  background: rgba(32, 0, 100, 0.08);
+}
+
+
+/* CONTENIDO */
+
+.plan-modal-content {
+  flex: 1;
+
+  min-height: 0;
+
+  overflow-y: auto;
+
+  padding: 8px 26px 20px;
+}
+
+
+.plan-modal-semestre {
+  margin-top: 20px;
+}
+
+.plan-modal-semestre h3 {
+  margin: 0 0 10px;
+
+  font-family: 'Sora', sans-serif;
+
+  font-size: 15px;
+  font-weight: 600;
+
+  color: #200064;
+}
+
+
+.plan-modal-materias {
+  display: flex;
+  flex-direction: column;
+
+  gap: 7px;
+}
+
+
+.plan-modal-materia {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  gap: 20px;
+
+  padding: 10px 14px;
+
+  border: 1px solid rgba(32, 0, 100, 0.1);
+
+  border-radius: 10px;
+
+  background: rgba(32, 0, 100, 0.04);
+}
+
+
+.plan-modal-materia-info {
+  min-width: 0;
+
+  display: flex;
+  flex-direction: column;
+
+  gap: 2px;
+}
+
+.plan-modal-materia-nombre {
+  font-size: 13px;
+  font-weight: 600;
+
+  color: #322b39;
+}
+
+.plan-modal-materia-categoria {
+  font-size: 11px;
+
+  color: #81788a;
+}
+
+.plan-modal-materia-creditos {
+  flex-shrink: 0;
+
+  font-size: 12px;
+  font-weight: 700;
+
+  color: #200064;
+}
+
+
+/* BOTONES DE ABAJO */
+
+.plan-modal-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+
+  gap: 10px;
+
+  padding: 18px 26px 22px;
+
+  border-top: 1px solid rgba(32, 0, 100, 0.1);
+}
+
+
+.plan-modal-cancelar,
+.plan-modal-confirmar {
+  border: none;
+
+  padding: 8px 16px;
+
+  border-radius: 9px;
+
+  font-size: 13px;
+  font-weight: 600;
+
+  cursor: pointer;
+}
+
+
+.plan-modal-cancelar {
+  background: rgba(32, 0, 100, 0.07);
+
+  color: #200064;
+}
+
+
+.plan-modal-confirmar {
+  background: linear-gradient(
+    270deg,
+    #DE6ADE,
+    #200064d8
+  );
+
+  color: white;
+}
+
+
+.plan-modal-cancelar:hover,
+.plan-modal-confirmar:hover {
+  opacity: 0.85;
+}

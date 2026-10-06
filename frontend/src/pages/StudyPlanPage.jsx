@@ -10,7 +10,10 @@ const CATEGORIAS = [
   { id: 'core-curriculum', nombre: 'Core curriculum', color: 'cat-sand' },
   { id: 'cs-sociales', nombre: 'Cs. sociales', color: 'cat-slate' },
   { id: 'electivas', nombre: 'Electivas', color: 'cat-teal' },
+  { id: 'sin-categoria', nombre: 'Sin categoría', color: 'cat-slate' },
 ]
+
+
 
 const SEMESTRES = [
   { numero: 1, nombre: 'Primer', creditos: 32, materias: [
@@ -95,7 +98,70 @@ const EXTRAS = [
   { nombre: 'Pasantía', creditos: 20 },
   { nombre: 'Actividades sociales', creditos: 5 },
 ]
+const NOMBRES_SEMESTRE = [
+  '',
+  'Primer',
+  'Segundo',
+  'Tercer',
+  'Cuarto',
+  'Quinto',
+  'Sexto',
+  'Séptimo',
+  'Octavo',
+  'Noveno',
+  'Décimo',
+]
 
+function normalizarCategoria(categoria) {
+  if (!categoria) return 'sin-categoria'
+
+  const valor = categoria.trim().toLowerCase()
+
+  // Si Ollama ya devolvió directamente el id
+  const porId = CATEGORIAS.find(
+    (cat) => cat.id.toLowerCase() === valor
+  )
+
+  if (porId) return porId.id
+
+  // Si devolvió el nombre visible
+  const porNombre = CATEGORIAS.find(
+    (cat) => cat.nombre.toLowerCase() === valor
+  )
+
+  if (porNombre) return porNombre.id
+
+  // Algunas variantes posibles
+  if (valor.includes('básicas específicas')) {
+    return 'basicas-especificas'
+  }
+
+  if (valor.includes('básicas comunes')) {
+    return 'basicas-comunes'
+  }
+
+  if (valor.includes('ingeniería aplicada')) {
+    return 'ingenieria-aplicada'
+  }
+
+  if (valor.includes('proyecto')) {
+    return 'proyecto-integrador'
+  }
+
+  if (valor.includes('informática')) {
+    return 'informatica-comunes'
+  }
+
+  if (valor.includes('social')) {
+    return 'cs-sociales'
+  }
+
+  if (valor.includes('electiv')) {
+    return 'electivas'
+  }
+
+  return 'sin-categoria'
+}
 function materiasDe(semestre, catId) {
   return semestre.materias?.filter((m) => m.cat === catId) ?? []
 }
@@ -105,11 +171,14 @@ function totalCreditos(semestre) {
   return semestre.materias.reduce((acc, m) => acc + m.creditos, 0)
 }
 
-const TOTAL_CARRERA =
-  SEMESTRES.reduce((acc, s) => acc + totalCreditos(s), 0) +
-  EXTRAS.reduce((acc, e) => acc + e.creditos, 0)
-
 function StudyPlanPage() {
+
+  
+  const [archivoPlan, setArchivoPlan] = useState(null)
+  const [analizandoPlan, setAnalizandoPlan] = useState(false)
+  const [planImportado, setPlanImportado] = useState(null)
+  const [semestres, setSemestres] = useState(SEMESTRES)
+  const [carrera, setCarrera] = useState('')
     const gridRef = useRef(null)
     const [creditosCompletados, setCreditosCompletados] = useState({})
     function moverPlan(direccion) {
@@ -118,6 +187,77 @@ function StudyPlanPage() {
           behavior: 'smooth',
       })
     }
+    const totalCarrera =
+  semestres.reduce(
+    (acc, semestre) =>
+      acc + totalCreditos(semestre),
+    0
+  ) +
+  EXTRAS.reduce(
+    (acc, extra) =>
+      acc + extra.creditos,
+    0
+  )
+
+
+  async function importarPlan() {
+    if (!archivoPlan) {return}
+    setAnalizandoPlan(true)
+    try {
+      const formData = new FormData()
+      formData.append(
+        'pdf',
+        archivoPlan)
+      const respuesta = await fetch(
+        '/api/study-plan/import',
+        {
+          method: 'POST',
+          body: formData
+        }
+      )
+      const datos = await respuesta.json()
+      if (!respuesta.ok) {
+        throw new Error(
+          datos.error ??
+          'No se pudo importar el plan')}
+      setPlanImportado(datos)
+      console.log(datos)
+    } catch (error) {
+      console.error(error)
+    } finally {
+      setAnalizandoPlan(false)
+    }
+  }
+  function cancelarImportacion() {
+    setPlanImportado(null)
+  }
+  function confirmarPlan() {
+    if (!planImportado) return
+
+    setCarrera(planImportado.carrera ?? '')
+
+    const nuevosSemestres = planImportado.semestres.map((semestre) => ({
+      numero: semestre.numero,
+
+      nombre:
+        NOMBRES_SEMESTRE[semestre.numero] ??
+        `Semestre ${semestre.numero}`,
+
+      materias: semestre.materias.map((materia) => ({
+        cat: normalizarCategoria(materia.categoria),
+        codigo: materia.codigo ?? '',
+        nombre: materia.nombre ?? '',
+
+        creditos: Number(materia.creditos) || 0,
+      })),
+    }))
+
+    setSemestres(nuevosSemestres)
+
+    setPlanImportado(null)
+    setArchivoPlan(null)
+  }
+
 
   function agregarCredito(nombre, maximo) {
     setCreditosCompletados((anteriores) => {
@@ -153,9 +293,24 @@ function StudyPlanPage() {
 
             <div className="plan-header-buttons">
                 <div className="add-plan-button">
-                    <button >
-                        Agregar plan de estudio
+                    <input
+                      type="file"
+                      accept=".pdf"
+                      onChange={(e) => {
+                        setArchivoPlan(e.target.files[0])
+                      }}
+                    />
+
+                    <button
+                      type="button"
+                      onClick={importarPlan}
+                      disabled={!archivoPlan || analizandoPlan}
+                    >
+                      {analizandoPlan
+                        ? 'Analizando...'
+                        : 'Importar plan'}
                     </button>
+
                 </div>
 
                 <div className="plan-nav">
@@ -181,10 +336,10 @@ function StudyPlanPage() {
         <div className="plan-grid-wrapper" ref={gridRef}>
           <div
             className="plan-grid"
-            style={{ gridTemplateColumns: `200px repeat(${SEMESTRES.length}, minmax(150px, 1fr)) 100px` }}
+            style={{ gridTemplateColumns: `200px repeat(${semestres.length}, minmax(150px, 1fr)) 100px` }}
           >
             <div className="plan-cell plan-corner">Área</div>
-            {SEMESTRES.map((s) => (
+            {semestres.map((s) => (
               <div className="plan-cell plan-sem-head" key={s.numero}>
                 <span className="plan-sem-nombre">{s.nombre}</span>
                 <span className="plan-sem-creditos">{totalCreditos(s)} ECTS</span>
@@ -193,14 +348,14 @@ function StudyPlanPage() {
             <div className="plan-cell plan-sem-head plan-resumen-head">Resumen</div>
 
             {CATEGORIAS.map((cat) => {
-              const totalCat = SEMESTRES.reduce(
+              const totalCat = semestres.reduce(
                 (acc, s) => acc + materiasDe(s, cat.id).reduce((a, m) => a + m.creditos, 0),
                 0
               )
               return (
                 <div className="plan-row" key={cat.id}>
                   <div className={`plan-cell plan-cat ${cat.color}`}>{cat.nombre}</div>
-                  {SEMESTRES.map((s) => (
+                  {semestres.map((s) => (
                     <div className="plan-cell plan-slot" key={s.numero}>
                       {s.especial ? (
                         cat.id === 'electivas' && (
@@ -210,8 +365,8 @@ function StudyPlanPage() {
                         )
                       ) : (
                         materiasDe(s, cat.id).map((m) => (
-                          <span className={`plan-chip ${cat.color}`} key={m.nombre}>
-                            <span className="plan-chip-texto">{m.nombre}</span>
+                          <span className={`plan-chip ${cat.color}`} key={m.codigo || m.nombre}>
+                            <span className="plan-chip-texto">{m.codigo || m.nombre}</span>
                             <span className="plan-chip-creditos">{m.creditos}</span>
                           </span>
                         ))
@@ -261,10 +416,117 @@ function StudyPlanPage() {
           })}
           <div className="plan-extra-card plan-extra-total">
             <span className="plan-extra-nombre">Total de la carrera</span>
-            <span className="plan-extra-creditos">{TOTAL_CARRERA} ECTS</span>
+            <span className="plan-extra-creditos">{totalCarrera} ECTS</span>
           </div>
         </div>
       </section>
+
+      {planImportado && (
+        <div className="plan-modal-overlay">
+
+          <div className="plan-modal">
+
+            <div className="plan-modal-header">
+
+              <div>
+                <h2 className="plan-modal-title">
+                  Plan de estudio detectado
+                </h2>
+
+                <p className="plan-modal-carrera">
+                  {planImportado.carrera ?? 'Carrera no identificada'}
+                </p>
+              </div>
+
+              <button
+                type="button"
+                className="plan-modal-cerrar"
+                onClick={cancelarImportacion}
+                aria-label="Cerrar"
+              >
+                ×
+              </button>
+
+            </div>
+
+
+            <div className="plan-modal-content">
+
+              {planImportado.semestres?.map((semestre) => (
+
+                <div
+                  className="plan-modal-semestre"
+                  key={semestre.numero}
+                >
+
+                  <h3>
+                    Semestre {semestre.numero}
+                  </h3>
+
+                  <div className="plan-modal-materias">
+
+                    {semestre.materias?.map((materia, index) => (
+
+                      <div
+                        className="plan-modal-materia"
+                        key={`${semestre.numero}-${index}`}
+                      >
+
+                        <div className="plan-modal-materia-info">
+
+                          <span className="plan-modal-materia-nombre">
+                            {materia.nombre}
+                          </span>
+
+                          {materia.categoria && (
+                            <span className="plan-modal-materia-categoria">
+                              {materia.categoria}
+                            </span>
+                          )}
+
+                        </div>
+
+                        <span className="plan-modal-materia-creditos">
+                          {materia.creditos} ECTS
+                        </span>
+
+                      </div>
+
+                    ))}
+
+                  </div>
+
+                </div>
+
+              ))}
+
+            </div>
+
+
+            <div className="plan-modal-actions">
+
+              <button
+                type="button"
+                className="plan-modal-cancelar"
+                onClick={cancelarImportacion}
+              >
+                Cancelar
+              </button>
+
+              <button
+                type="button"
+                className="plan-modal-confirmar"
+                onClick={confirmarPlan}
+              >
+                Confirmar plan
+              </button>
+
+            </div>
+
+          </div>
+
+        </div>
+      )}
     </main>
   )
 }
