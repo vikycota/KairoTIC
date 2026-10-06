@@ -408,20 +408,6 @@ def validar_plan(raw, carrera=None, existentes=None, semestres_existentes=None):
     if ciclo:
         errores.append("Hay un ciclo de previas: " + " → ".join(ciclo) + ".")
 
-    # La tabla Materias solo guarda una previa por materia (Materia_Previa_Nombre).
-    for m in materias:
-        if len(m["previas"]) > 1:
-            ignoradas = ", ".join(f"«{p}»" for p in m["previas"][1:])
-            avisos.append(
-                f"Fila {m['fila']} («{m['nombre']}»): la base solo admite una previa por materia; "
-                f"se guardará «{m['previas'][0]}» y se ignorarán {ignoradas}."
-            )
-            m["previas"] = m["previas"][:1]
-
-    # La base no tiene dónde guardar la categoría de cada materia.
-    if any(m["categoria"] for m in materias):
-        avisos.append("La columna 'categoria' se lee pero no se guarda: la base de datos no tiene dónde almacenarla.")
-
     # --- 4) choques con lo que ya está en la base (otras carreras / importaciones previas)
     for m in materias:
         actuales = existentes.get(m["nombre"])
@@ -443,6 +429,8 @@ def validar_plan(raw, carrera=None, existentes=None, semestres_existentes=None):
         "semestres": len({m["semestre"] for m in materias if m["semestre"]}),
         "sin_semestre": sum(1 for m in materias if not m["semestre"]),
         "con_previas": sum(1 for m in materias if m["previas"]),
+        "total_previas": sum(len(m["previas"]) for m in materias),
+        "categorias": len({m["categoria"] for m in materias if m["categoria"]}),
     }
     return {
         "valido": not errores,

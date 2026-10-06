@@ -26,15 +26,27 @@ CREATE TABLE Semestres (
 CREATE TABLE Materias (
     Nombre                  VARCHAR(100)    NOT NULL,
     Cantidad_de_Creditos    INT             NOT NULL,
-    Materia_Previa_Nombre   VARCHAR(100)    NULL,
-    CONSTRAINT pk_materias PRIMARY KEY (Nombre),
-    CONSTRAINT fk_materias_previa
-        FOREIGN KEY (Materia_Previa_Nombre)
-        REFERENCES Materias (Nombre)
-        ON UPDATE CASCADE
-        ON DELETE SET NULL
+    Categoria               VARCHAR(100)    NULL,
+    CONSTRAINT pk_materias PRIMARY KEY (Nombre)
 );
 
+-- Una materia puede tener varias previas.
+CREATE TABLE Previas (
+    Materias_Nombre   VARCHAR(100)  NOT NULL,
+    Previa_Nombre     VARCHAR(100)  NOT NULL,
+    CONSTRAINT pk_previas PRIMARY KEY (Materias_Nombre, Previa_Nombre),
+    CONSTRAINT chk_previa_distinta CHECK (Materias_Nombre <> Previa_Nombre),
+    CONSTRAINT fk_previas_materia
+        FOREIGN KEY (Materias_Nombre)
+        REFERENCES Materias (Nombre)
+        ON UPDATE CASCADE
+        ON DELETE CASCADE,
+    CONSTRAINT fk_previas_previa
+        FOREIGN KEY (Previa_Nombre)
+        REFERENCES Materias (Nombre)
+        ON UPDATE CASCADE
+        ON DELETE CASCADE
+);
 
 CREATE TABLE Examenes (
     Fecha            DATE            NOT NULL,

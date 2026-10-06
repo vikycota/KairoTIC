@@ -156,10 +156,12 @@ def importar():
         for m in materias:
             cur.execute(
                 """
-                INSERT INTO Materias (Nombre, Cantidad_de_Creditos) VALUES (%s, %s)
-                ON CONFLICT (Nombre) DO UPDATE SET Cantidad_de_Creditos = EXCLUDED.Cantidad_de_Creditos
+                INSERT INTO Materias (Nombre, Cantidad_de_Creditos, Categoria) VALUES (%s, %s, %s)
+                ON CONFLICT (Nombre) DO UPDATE SET
+                    Cantidad_de_Creditos = EXCLUDED.Cantidad_de_Creditos,
+                    Categoria = EXCLUDED.Categoria
                 """,
-                (m["nombre"], m["creditos"]),
+                (m["nombre"], m["creditos"], m["categoria"]),
             )
             cur.execute(
                 "INSERT INTO Tiene (Carreras_Nombre, Materias_Nombre) VALUES (%s, %s)",
@@ -191,16 +193,17 @@ def importar():
                     (nombre_sem, anio, m["nombre"]),
                 )
 
-        # Previa: la base guarda una sola por materia (ya se recortó en la validación).
-        # Va después de insertar todas las materias para no violar la clave foránea.
+        # Previas (varias por materia): reemplazan a las anteriores. Van después de insertar
+        # todas las materias para no violar la clave foránea.
+        cur.execute("DELETE FROM Previas WHERE Materias_Nombre = ANY(%s)", (nombres,))
         total_previas = 0
         for m in materias:
-            previa = m["previas"][0] if m["previas"] else None
-            cur.execute(
-                "UPDATE Materias SET Materia_Previa_Nombre = %s WHERE Nombre = %s",
-                (previa, m["nombre"]),
-            )
-            total_previas += 1 if previa else 0
+            for previa in m["previas"]:
+                cur.execute(
+                    "INSERT INTO Previas (Materias_Nombre, Previa_Nombre) VALUES (%s, %s)",
+                    (m["nombre"], previa),
+                )
+                total_previas += 1
 
         conn.commit()
         cur.close()
@@ -281,21 +284,21 @@ def obtener_plan():
             """
             SELECT m.Nombre, m.Cantidad_de_Creditos,
                    MIN((s.Semestres_Anio - 1) * 2 + CASE s.Semestres_Nombre WHEN 'Semestre 1' THEN 1 ELSE 2 END) AS semestre,
-                   m.Materia_Previa_Nombre
+                   m.Categoria,
+                   ARRAY(SELECT p.Previa_Nombre FROM Previas p
+                         WHERE p.Materias_Nombre = m.Nombre ORDER BY p.Previa_Nombre) AS previas
             FROM Tiene t
             JOIN Materias m ON m.Nombre = t.Materias_Nombre
             LEFT JOIN Se_Organiza_En s ON s.Materias_Nombre = m.Nombre
             WHERE t.Carreras_Nombre = %s
-            GROUP BY m.Nombre, m.Cantidad_de_Creditos, m.Materia_Previa_Nombre
+            GROUP BY m.Nombre, m.Cantidad_de_Creditos, m.Categoria
             ORDER BY semestre NULLS LAST, m.Nombre
             """,
             (carrera,),
         )
-        # La base no guarda categoría por materia: se devuelve None y el front la muestra como "Sin categoría".
         materias = [
-            {"nombre": n, "creditos": c, "semestre": sem, "categoria": None,
-             "previas": [prev] if prev else []}
-            for n, c, sem, prev in cur.fetchall()
+            {"nombre": n, "creditos": c, "semestre": sem, "categoria": cat, "previas": list(previas)}
+            for n, c, sem, cat, previas in cur.fetchall()
         ]
         cur.close()
         return jsonify({

@@ -27,22 +27,31 @@ INSERT INTO Semestres (Nombre, Anio, Cantidad_de_Creditos) VALUES
 
 -- ---------- MATERIAS ----------
 -- Primero las que no tienen previa
-INSERT INTO Materias (Nombre, Cantidad_de_Creditos, Materia_Previa_Nombre) VALUES
-('Introducción a la Programación', 8, NULL),
-('Matemática Discreta',            8, NULL),
-('Álgebra Lineal',                 8, NULL),
-('Bases de Datos I',               8, NULL);
+INSERT INTO Materias (Nombre, Cantidad_de_Creditos, Categoria) VALUES
+('Introducción a la Programación', 8,  'Informática comunes'),
+('Matemática Discreta',            8,  'C. Básicas específicas'),
+('Álgebra Lineal',                 8,  'C. Básicas comunes'),
+('Bases de Datos I',               8,  'Informática comunes'),
+('Estructuras de Datos',           10, 'Ingeniería aplicada'),
+('Bases de Datos II',              10, 'Ingeniería aplicada'),
+('Probabilidad y Estadística',     8,  'C. Básicas comunes'),
+('Algoritmos y Complejidad',       10, 'C. Básicas específicas'),
+('Machine Learning I',             12, 'Ingeniería aplicada'),
+('Sistemas Distribuidos',          10, 'Ingeniería aplicada'),
+('Machine Learning II',            12, 'Ingeniería aplicada'),
+('Ingeniería de Datos a Escala',   12, 'Ingeniería aplicada');
 
--- Luego las que dependen de otra (ya insertada arriba)
-INSERT INTO Materias (Nombre, Cantidad_de_Creditos, Materia_Previa_Nombre) VALUES
-('Estructuras de Datos',           10, 'Introducción a la Programación'),
-('Bases de Datos II',              10, 'Bases de Datos I'),
-('Probabilidad y Estadística',     8,  'Matemática Discreta'),
-('Algoritmos y Complejidad',       10, 'Estructuras de Datos'),
-('Machine Learning I',             12, 'Probabilidad y Estadística'),
-('Sistemas Distribuidos',          10, 'Bases de Datos II'),
-('Machine Learning II',            12, 'Machine Learning I'),
-('Ingeniería de Datos a Escala',   12, 'Sistemas Distribuidos');
+-- ---------- PREVIAS (una materia puede tener varias) ----------
+INSERT INTO Previas (Materias_Nombre, Previa_Nombre) VALUES
+('Estructuras de Datos',         'Introducción a la Programación'),
+('Bases de Datos II',            'Bases de Datos I'),
+('Probabilidad y Estadística',   'Matemática Discreta'),
+('Algoritmos y Complejidad',     'Estructuras de Datos'),
+('Algoritmos y Complejidad',     'Matemática Discreta'),
+('Machine Learning I',           'Probabilidad y Estadística'),
+('Sistemas Distribuidos',        'Bases de Datos II'),
+('Machine Learning II',          'Machine Learning I'),
+('Ingeniería de Datos a Escala', 'Sistemas Distribuidos');
 
 -- ---------- EXAMENES ----------
 INSERT INTO Examenes (Fecha, Materias_Nombre, Nota) VALUES
