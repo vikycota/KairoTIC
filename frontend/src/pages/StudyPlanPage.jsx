@@ -1,5 +1,5 @@
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import ImportarPlanModal from './ImportarPlanModal'
 const CATEGORIAS = [
   { id: 'basicas-comunes', nombre: 'C. Básicas comunes', color: 'cat-blue' },
@@ -222,7 +222,6 @@ function StudyPlanPage() {
   const [planApi, setPlanApi] = useState(null)
   const [errorPlan, setErrorPlan] = useState('')
   const [modalAbierto, setModalAbierto] = useState(false)
-    const gridRef = useRef(null)
     useEffect(() => {
       fetch('/api/carreras')
         .then((res) => res.ok ? res.json() : Promise.reject())
@@ -255,13 +254,6 @@ function StudyPlanPage() {
     }
 
     const [creditosCompletados, setCreditosCompletados] = useState({})
-    function moverPlan(direccion) {
-      gridRef.current?.scrollBy({
-          left: direccion * 450,
-          behavior: 'smooth',
-      })
-    }
-
   async function importarPlan() {
     if (!archivoPlan) {return}
     setAnalizandoPlan(true)
@@ -344,17 +336,17 @@ function StudyPlanPage() {
     })
   }
   return (
-    <main className="plan-page">
-      <section className="plan-card">
-        <header className="plan-header">
-            <div className="plan-header-text">
-                <h1 className="plan-title">Plan de estudio</h1>
-                <p className="plan-subtitle">
+    <main className="estudio-page">
+      <section className="estudio-card">
+        <header className="estudio-header">
+            <div className="estudio-header-text">
+                <h1 className="estudio-title">Plan de estudio</h1>
+                <p className="estudio-subtitle">
                 Materias por semestre y créditos ECTS
                 </p>
             </div>
 
-            <div className="plan-header-buttons">
+            <div className="estudio-header-buttons">
                 <div className="add-plan-button">
                     {carreras.length > 0 && (
                       <select className="plan-select" value={seleccion} onChange={(e) => setSeleccion(e.target.value)} aria-label="Carrera">
@@ -382,74 +374,59 @@ function StudyPlanPage() {
                     </button>
 
                 </div>
-
-                <div className="plan-nav">
-                    <button
-                    type="button"
-                    onClick={() => moverPlan(-1)}
-                    aria-label="Mover plan hacia la izquierda"
-                    >
-                    ‹
-                    </button>
-
-                    <button
-                    type="button"
-                    onClick={() => moverPlan(1)}
-                    aria-label="Mover plan hacia la derecha"
-                    >
-                    ›
-                    </button>
-                </div>
                 </div>
             </header>
 
         {errorPlan && <p className="plan-error" role="alert">{errorPlan}</p>}
 
-        <div className="plan-grid-wrapper" ref={gridRef}>
-          <div
-            className="plan-grid"
-            style={{ gridTemplateColumns: `200px repeat(${plan.semestres.length}, minmax(150px, 1fr)) 100px` }}
-          >
-            <div className="plan-cell plan-corner">Área</div>
-            {plan.semestres.map((s) => (
-              <div className="plan-cell plan-sem-head" key={s.numero}>
+        <div className="plan-tablero" style={{ '--semestres': plan.semestres.length }}>
+          {plan.semestres.map((s) => (
+            <section className="plan-semestre" key={s.numero}>
+              <header className="plan-semestre-cabecera">
                 <span className="plan-sem-nombre">{s.nombre}</span>
                 <span className="plan-sem-creditos">{totalCreditos(s)} ECTS</span>
+              </header>
+              <div className="plan-semestre-materias">
+                {s.especial ? (
+                  <span className="estudio-chip plan-chip-internacional">
+                    {s.especial}: {s.creditosElectivos} créd. electivos
+                  </span>
+                ) : (
+                  s.materias.map((m) => {
+                    const cat = plan.categorias.find((c) => c.id === m.cat)
+                    const ayuda = [
+                      cat?.nombre,
+                      m.previas?.length ? `Previas: ${m.previas.join(', ')}` : null,
+                    ].filter(Boolean).join(' · ')
+                    return (
+                      <span
+                        className={`estudio-chip ${cat?.color ?? ''}`}
+                        key={m.codigo || m.nombre}
+                        title={ayuda || undefined}
+                      >
+                        <span className="estudio-chip-texto">{m.codigo || m.nombre}</span>
+                        <span className="plan-chip-creditos">{m.creditos}</span>
+                      </span>
+                    )
+                  })
+                )}
               </div>
-            ))}
-            <div className="plan-cell plan-sem-head plan-resumen-head">Resumen</div>
+            </section>
+          ))}
+        </div>
 
-            {plan.categorias.map((cat) => {
-              const totalCat = plan.semestres.reduce(
-                (acc, s) => acc + materiasDe(s, cat.id).reduce((a, m) => a + m.creditos, 0),
-                0
-              )
-              return (
-                <div className="plan-row" key={cat.id}>
-                  <div className={`plan-cell plan-cat ${cat.color}`}>{cat.nombre}</div>
-                  {plan.semestres.map((s) => (
-                    <div className="plan-cell plan-slot" key={s.numero}>
-                      {s.especial ? (
-                        cat.id === 'electivas' && (
-                          <span className="plan-chip plan-chip-internacional">
-                            {s.creditosElectivos} créd. electivos
-                          </span>
-                        )
-                      ) : (
-                        materiasDe(s, cat.id).map((m) => (
-                          <span className={`plan-chip ${cat.color}`} key={m.codigo || m.nombre} title={m.previas?.length ? `Previas: ${m.previas.join(', ')}` : undefined}>
-                            <span className="plan-chip-texto">{m.codigo || m.nombre}</span>
-                            <span className="plan-chip-creditos">{m.creditos}</span>
-                          </span>
-                        ))
-                      )}
-                    </div>
-                  ))}
-                  <div className="plan-cell plan-total">{totalCat || '—'}</div>
-                </div>
-              )
-            })}
-          </div>
+        <div className="plan-leyenda">
+          {plan.categorias.map((cat) => ({
+            cat,
+            creditos: plan.semestres.reduce(
+              (acc, s) => acc + materiasDe(s, cat.id).reduce((a, m) => a + m.creditos, 0),
+              0
+            ),
+          })).filter(({ creditos }) => creditos > 0).map(({ cat, creditos }) => (
+            <span className={`plan-leyenda-item ${cat.color}`} key={cat.id}>
+              {cat.nombre} <strong>{creditos}</strong>
+            </span>
+          ))}
         </div>
 
         <div className="plan-extras">
