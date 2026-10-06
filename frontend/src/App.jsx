@@ -15,6 +15,7 @@ import SidebarMenu from './pages/SidebarMenu'
 import StudyPlanPage from './pages/StudyPlanPage'
 import easteregg from './assets/easteregg.webp'
 import PlanPage from './pages/PlanPage'
+import ProgresoPage from './pages/ProgresoPage'
 import ConfigPage from "./pages/ConfigPage"
 
 function App() {
@@ -53,6 +54,8 @@ function App() {
         {vista === 'calendario' && <WeeklyPlanner />}
 
         {vista === 'plan-estudio' && <StudyPlanPage />}
+
+        {vista === 'progreso' && <ProgresoPage />}
 
         {vista === 'planificar' && <PlanPage />}
           
