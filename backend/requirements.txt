@@ -3,3 +3,5 @@ psycopg2-binary==2.9.9
 bcrypt==4.2.0
 PyMuPDF
 requests
+openpyxl==3.1.5
+flask-cors==4.0.1
