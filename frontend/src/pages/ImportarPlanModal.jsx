@@ -157,7 +157,7 @@ function ImportarPlanModal({ abierto, onCerrar, onImportado }) {
                 <strong>{revision.carrera || 'Sin nombre de carrera'}</strong>
                 {' — '}
                 {revision.resumen.materias} materias, {revision.resumen.creditos_total} créditos,{' '}
-                {revision.resumen.semestres} semestres, {revision.resumen.con_previas} con previas
+                {revision.resumen.semestres} semestres, {revision.resumen.con_previas} con previas ({revision.resumen.total_previas} en total), {revision.resumen.categorias} categorías
                 {revision.resumen.sin_semestre > 0 && `, ${revision.resumen.sin_semestre} fuera de semestre`}
               </p>
 
