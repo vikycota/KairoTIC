@@ -2,21 +2,12 @@ import { useEffect, useMemo, useState } from 'react'
 import '../pagesCSS/ProgresoPage.css'
 
 const NOTA_MAXIMA = 12
-const CLAVE_EMAIL = 'kairo-email'
 
 function hoy() {
   const d = new Date()
   const mes = String(d.getMonth() + 1).padStart(2, '0')
   const dia = String(d.getDate()).padStart(2, '0')
   return `${d.getFullYear()}-${mes}-${dia}`
-}
-
-function leerEmailGuardado() {
-  try {
-    return localStorage.getItem(CLAVE_EMAIL) ?? ''
-  } catch {
-    return ''
-  }
 }
 
 async function leerJson(res) {
@@ -32,9 +23,8 @@ function formatearFecha(iso) {
   return `${dia}/${mes}/${anio}`
 }
 
-function ProgresoPage({ emailUsuario = '' }) {
-  const [emailEditable, setEmailEditable] = useState(leerEmailGuardado)
-  const email = (emailUsuario || emailEditable).trim()
+function ProgresoPage({ emailUsuario }) {
+  const email = emailUsuario
 
   const [carreras, setCarreras] = useState([])
   const [carrera, setCarrera] = useState('')
@@ -48,13 +38,6 @@ function ProgresoPage({ emailUsuario = '' }) {
   const [nota, setNota] = useState('')
   const [fecha, setFecha] = useState(hoy)
   const [guardando, setGuardando] = useState(false)
-
-  function guardarEmail(valor) {
-    setEmailEditable(valor)
-    try {
-      localStorage.setItem(CLAVE_EMAIL, valor)
-    } catch { /* sin almacenamiento: sigue funcionando en memoria */ }
-  }
 
   useEffect(() => {
     fetch('/api/carreras')
@@ -163,7 +146,7 @@ function ProgresoPage({ emailUsuario = '' }) {
     }
   }
 
-  const notaValida = nota !== '' && Number(nota) >= 0 && Number(nota) <= NOTA_MAXIMA
+  const notaValida = /^\d+$/.test(nota) && Number(nota) >= 0 && Number(nota) <= NOTA_MAXIMA
   const puedeGuardar = email && materia && notaValida && fecha && !guardando
 
   return (
@@ -173,18 +156,6 @@ function ProgresoPage({ emailUsuario = '' }) {
           <h1 className="progreso-title">Mi progreso</h1>
           <p className="progreso-subtitle">Materias aprobadas hasta el momento y sus notas</p>
         </header>
-
-        {!emailUsuario && (
-          <label className="progreso-campo progreso-email">
-            <span>Tu email</span>
-            <input
-              type="email"
-              value={emailEditable}
-              onChange={(e) => guardarEmail(e.target.value)}
-              placeholder="alumno@correo.com"
-            />
-          </label>
-        )}
 
         <div className="progreso-resumen">
           <div>
@@ -251,7 +222,7 @@ function ProgresoPage({ emailUsuario = '' }) {
                   type="number"
                   min="0"
                   max={NOTA_MAXIMA}
-                  step="0.01"
+                  step="1"
                   value={nota}
                   onChange={(e) => setNota(e.target.value)}
                   required
@@ -268,7 +239,6 @@ function ProgresoPage({ emailUsuario = '' }) {
           <button type="submit" className="progreso-guardar" disabled={!puedeGuardar}>
             {guardando ? 'Guardando…' : 'Agregar materia'}
           </button>
-          {!email && <p className="progreso-ayuda">Ingresá tu email para poder guardar.</p>}
         </form>
 
         {error && <p className="progreso-mensaje progreso-mensaje-error" role="alert">{error}</p>}

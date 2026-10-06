@@ -25,8 +25,8 @@ def _validar_nota(valor):
         raise ValidationError("El campo 'nota' debe ser un número.")
     if not nota.is_finite() or not (NOTA_MINIMA <= nota <= NOTA_MAXIMA):
         raise ValidationError(f"La nota debe estar entre {NOTA_MINIMA} y {NOTA_MAXIMA}.")
-    if nota != nota.quantize(Decimal("0.01")):
-        raise ValidationError("La nota admite como máximo 2 decimales.")
+    if nota != nota.to_integral_value():
+        raise ValidationError("La nota debe ser un número entero.")
     return nota
 
 
@@ -149,7 +149,7 @@ def agregar_materia_completada():
         return jsonify({
             "message": "Materia completada guardada correctamente.",
             "materia": materia,
-            "nota": float(nota),
+            "nota": int(nota),
             "fecha": fecha.isoformat(),
         }), 201
 
@@ -190,7 +190,7 @@ def listar_materias_completadas():
             (email,),
         )
         materias = [
-            {"materia": n, "creditos": c, "nota": float(nota), "fecha": f.isoformat()}
+            {"materia": n, "creditos": c, "nota": int(nota), "fecha": f.isoformat()}
             for n, c, nota, f in cur.fetchall()
         ]
         cur.close()

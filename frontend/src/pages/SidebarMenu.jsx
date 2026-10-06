@@ -6,7 +6,7 @@ const ITEMS_MENU = [
   { id: 'calendario', etiqueta: 'Calendario' },
   {id : 'plan-estudio', etiqueta: 'Plan de estudio'},
   { id: 'progreso', etiqueta: 'Mi progreso' },
-  { id: 'planificar', etiqueta: 'Planificar' },
+  { id: 'planificar', etiqueta: 'Planificar Semestre' },
   { id: 'ajustes', etiqueta: 'Configuración' },
 ]
 
