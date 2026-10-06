@@ -1,10 +1,12 @@
 from flask import Flask, jsonify
 from Register import register_bp
-from Login import login_bp
+from Pasantia import pasantia_bp
+from flask_cors import CORS
 
 app = Flask(__name__)
 app.register_blueprint(register_bp)
-app.register_blueprint(login_bp)
+app.register_blueprint(pasantia_bp)
+CORS(app)
 
 
 @app.route("/", methods=["GET"])
