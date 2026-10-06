@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import logoKairo from '../assets/logokairo.jpeg'
+import logoKairo from '../assets/logoKairo.jpeg'
 
 
 const ITEMS_MENU = [
