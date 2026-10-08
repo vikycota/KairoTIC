@@ -433,10 +433,10 @@ function StudyPlanPage() {
                     return (
                       <span
                         className={`estudio-chip ${cat?.color ?? ''}`}
-                        key={m.codigo || m.nombre}
+                        key={m.nombre}
                         title={ayuda || undefined}
                       >
-                        <span className="estudio-chip-texto">{m.codigo || m.nombre}</span>
+                        <span className="estudio-chip-texto">{m.nombre}</span>
                         <span className="plan-chip-creditos">{m.creditos}</span>
                       </span>
                     )

@@ -72,6 +72,7 @@ function App() {
         onSeleccionar={setVista}
         onCerrarSesion={cerrarSesion}
       />
+        
 
       <main className="app-content">
         {vista === 'calendario' && <WeeklyPlanner />}
