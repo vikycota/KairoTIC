@@ -360,19 +360,27 @@ function InicioPage({ nombreUsuario, emailUsuario, onIr }) {
   const progreso = Object.values(listos).filter(Boolean).length
 
   return (
-    <main className="inicio-page">
-      <section className="inicio-card">
-        <header className="inicio-cabecera">
-          <div>
-            <h1>{nombreUsuario ? `Hola, ${nombreUsuario}` : 'Bienvenido a Kairo'}</h1>
-            <p>Cargá tu información en tres pasos y empezá a planificar tu semestre.</p>
+    <div className="inicio-page">
+      <header className="inicio-hero">
+        <span className="inicio-blob inicio-blob--1" aria-hidden="true" />
+        <span className="inicio-blob inicio-blob--2" aria-hidden="true" />
+        <span className="inicio-etiqueta">Cargas del semestre</span>
+        <h1>{nombreUsuario ? `Hola, ${nombreUsuario}` : 'Bienvenido a Kairo'}</h1>
+        <p>Cargá tu información en tres pasos y empezá a planificar tu semestre.</p>
+
+        <div className="inicio-datos">
+          <div className="inicio-dato">
+            <strong>{progreso}/3</strong>
+            <span>Pasos listos</span>
           </div>
-          <div className="inicio-avance" aria-label={`${progreso} de 3 pasos completados`}>
-            <span className="inicio-avance-texto">{progreso} de 3 listos</span>
+          <div className="inicio-dato inicio-dato--barra" aria-label={`${progreso} de 3 pasos completados`}>
+            <span>Avance</span>
             <div className="inicio-avance-barra"><span style={{ width: `${(progreso / 3) * 100}%` }} /></div>
           </div>
-        </header>
+        </div>
+      </header>
 
+      <div className="inicio-contenido">
         <div className="inicio-grilla">
           <CargadorPlan onVerPlan={() => onIr?.('plan-estudio')} onListo={marcar.plan} />
           <CargadorBloques
@@ -401,8 +409,8 @@ function InicioPage({ nombreUsuario, emailUsuario, onIr }) {
           </button>
           {(!listos.plan || !listos.horarios) && <span>Cargá al menos el plan y los horarios para continuar.</span>}
         </footer>
-      </section>
-    </main>
+      </div>
+    </div>
   )
 }
 

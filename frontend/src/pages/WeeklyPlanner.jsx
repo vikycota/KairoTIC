@@ -250,8 +250,8 @@ function WeeklyPlanner({ emailUsuario, onIr }) {
       <div className="cal-contenido">
         {sinCargas && (
           <div className="cal-aviso" role="status">
-            <span>Todavía no cargaste tus horarios ni talleres. Cargalos en Inicio y van a aparecer acá todas las semanas.</span>
-            <button type="button" className="cal-btn cal-btn--primario" onClick={() => onIr?.('inicio')}>Ir a Inicio</button>
+            <span>Todavía no cargaste tus horarios ni talleres. Cargalos en Cargas y van a aparecer acá todas las semanas.</span>
+            <button type="button" className="cal-btn cal-btn--primario" onClick={() => onIr?.('inicio')}>Ir a Cargas</button>
           </div>
         )}
 
@@ -281,7 +281,7 @@ function WeeklyPlanner({ emailUsuario, onIr }) {
                 {panel.evento.salon ? ` · Salón ${panel.evento.salon}` : ''}
                 {panel.evento.extra ? ` · ${panel.evento.tipo === 'clase' ? `Docente: ${panel.evento.extra}` : `${panel.evento.extra} cupos`}` : ''}
               </p>
-              <small>Viene de los horarios que cargaste en Inicio y se repite todas las semanas.</small>
+              <small>Viene de los horarios que cargaste en Cargas y se repite todas las semanas.</small>
             </div>
             <button type="button" className="cal-cerrar" onClick={() => setPanel(null)} aria-label="Cerrar">×</button>
           </aside>
