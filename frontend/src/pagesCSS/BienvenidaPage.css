@@ -601,3 +601,6 @@
   [data-reveal] { opacity: 1; transform: none; }
   .land-pasos::before { transform: scaleX(1); }
 }
+
+.land-error--campo { padding: 0; background: none; color: #b3261e; font-weight: 500; }
+.land-login input[aria-invalid='true'] { border-color: #c4281f; background: #fff8f7; }

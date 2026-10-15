@@ -1,6 +1,4 @@
 import { useState } from 'react'
-import './pagesCSS/LoginPage.css'
-import './pagesCSS/RegisterPage.css'
 import './pagesCSS/SidebarMenu.css'
 import './pagesCSS/StudyPlanPage.css'
 import './App.css'
@@ -9,6 +7,7 @@ import "./pagesCSS/ConfigPage.css"
 import "./pagesCSS/WeeklyPlanner.css"
 
 import BienvenidaPage from './pages/BienvenidaPage'
+import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
 import WeeklyPlanner from './pages/WeeklyPlanner'
 import SidebarMenu from './pages/SidebarMenu'
@@ -27,7 +26,7 @@ function App() {
       return null
     }
   })
-  const [vista, setVista] = useState(usuario ? 'inicio' : 'login')
+  const [vista, setVista] = useState(usuario ? 'inicio' : 'bienvenida')
 
   function iniciarSesion(datos) {
     setUsuario(datos)
@@ -42,24 +41,35 @@ function App() {
     try {
       localStorage.removeItem('kairo-usuario')
     } catch { /* nada que limpiar */ }
-    setVista('login')
+    setVista('bienvenida')
   }
 
-  // Pantalla de login
-  if (!usuario && vista !== 'register') {
+  // Pantallas públicas: portada, login y registro
+  if (!usuario && vista === 'login') {
     return (
-      <BienvenidaPage
+      <LoginPage
         onLogin={iniciarSesion}
         onSwitchToRegister={() => setVista('register')}
+        onBack={() => setVista('bienvenida')}
       />
     )
   }
 
-  // Pantalla de registro
-  if (!usuario) {
+  if (!usuario && vista === 'register') {
     return (
       <RegisterPage
+        onRegistrado={iniciarSesion}
         onSwitchToLogin={() => setVista('login')}
+        onBack={() => setVista('bienvenida')}
+      />
+    )
+  }
+
+  if (!usuario) {
+    return (
+      <BienvenidaPage
+        onLogin={iniciarSesion}
+        onSwitchToRegister={() => setVista('register')}
       />
     )
   }

@@ -72,7 +72,7 @@ function BienvenidaPage({ onLogin, onSwitchToRegister }) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [verPassword, setVerPassword] = useState(false)
-  const [error, setError] = useState('')
+  const [errores, setErrores] = useState({})
   const [enviando, setEnviando] = useState(false)
   const [palabra, setPalabra] = useState(0)
   const raiz = useRevelar()
@@ -86,7 +86,7 @@ function BienvenidaPage({ onLogin, onSwitchToRegister }) {
 
   async function enviar(e) {
     e.preventDefault()
-    setError('')
+    setErrores({})
     setEnviando(true)
     try {
       const res = await fetch('/api/login', {
@@ -97,9 +97,13 @@ function BienvenidaPage({ onLogin, onSwitchToRegister }) {
       let data = {}
       try { data = await res.json() } catch { /* respuesta sin JSON */ }
       if (res.ok) onLogin(data.usuario)
-      else setError(res.status >= 502 ? 'El servidor no responde. Intentá de nuevo en unos minutos.' : data.error || 'No se pudo iniciar sesión.')
+      else if (res.status >= 502) setErrores({ general: 'El servidor no responde. Intentá de nuevo en unos minutos.' })
+      else if (data.campo === 'email' || data.campo === 'password') {
+        setErrores({ [data.campo]: data.error })
+        document.getElementById(data.campo === 'email' ? 'land-email' : 'land-pass')?.focus()
+      } else setErrores({ general: data.error || 'No se pudo iniciar sesión.' })
     } catch {
-      setError('Error de conexión con el servidor.')
+      setErrores({ general: 'Error de conexión con el servidor.' })
     } finally {
       setEnviando(false)
     }
@@ -180,9 +184,12 @@ function BienvenidaPage({ onLogin, onSwitchToRegister }) {
               autoComplete="email"
               placeholder="tu@email.com"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) => { setEmail(e.target.value); setErrores((x) => ({ ...x, email: '' })) }}
+              aria-invalid={errores.email ? 'true' : undefined}
+              aria-describedby={errores.email ? 'land-email-error' : undefined}
               required
             />
+            {errores.email && <p className="land-error land-error--campo" id="land-email-error" role="alert">{errores.email}</p>}
 
             <label htmlFor="land-pass">Contraseña</label>
             <div className="land-pass">
@@ -192,7 +199,9 @@ function BienvenidaPage({ onLogin, onSwitchToRegister }) {
                 autoComplete="current-password"
                 placeholder="Tu contraseña"
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={(e) => { setPassword(e.target.value); setErrores((x) => ({ ...x, password: '' })) }}
+                aria-invalid={errores.password ? 'true' : undefined}
+                aria-describedby={errores.password ? 'land-pass-error' : undefined}
                 required
               />
               <button
@@ -205,7 +214,8 @@ function BienvenidaPage({ onLogin, onSwitchToRegister }) {
               </button>
             </div>
 
-            {error && <p className="land-error" role="alert">{error}</p>}
+            {errores.password && <p className="land-error land-error--campo" id="land-pass-error" role="alert">{errores.password}</p>}
+            {errores.general && <p className="land-error" role="alert">{errores.general}</p>}
 
             <button type="submit" className="land-btn land-btn--primario" disabled={enviando}>
               {enviando ? 'Ingresando…' : 'Ingresar'}
