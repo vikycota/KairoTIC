@@ -5,7 +5,7 @@ const GRUPOS = [
   {
     titulo: 'Mi carrera',
     items: [
-      { id: 'inicio', etiqueta: 'Inicio', icono: 'M3 11l9-8 9 8M5 10v10h5v-6h4v6h5V10' },
+      { id: 'inicio', etiqueta: 'Cargas', icono: 'M12 16V4m0 0l-4 4m4-4l4 4M4 16v3a1 1 0 001 1h14a1 1 0 001-1v-3' },
       { id: 'plan-estudio', etiqueta: 'Plan de estudio', icono: 'M12 3L2 8l10 5 10-5-10-5zM6 10.5V15c0 1.5 3 3 6 3s6-1.5 6-3v-4.5' },
       { id: 'progreso', etiqueta: 'Mi progreso', icono: 'M4 19V9m6 10V5m6 14v-7m4 7H2' },
     ],
