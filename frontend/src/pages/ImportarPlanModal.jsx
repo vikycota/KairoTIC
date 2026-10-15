@@ -9,12 +9,12 @@ async function leerJson(res) {
   }
 }
 
-function ImportarPlanModal({ abierto, onCerrar, onImportado }) {
-  const [archivo, setArchivo] = useState(null)
+function ImportarPlanModal({ abierto, archivoInicial = null, onCerrar, onImportado }) {
+  const [archivo, setArchivo] = useState(archivoInicial)
   const [carrera, setCarrera] = useState('')
   const [revision, setRevision] = useState(null)   // respuesta de /plan/preview
   const [error, setError] = useState('')           // error de lectura o de red
-  const [revisando, setRevisando] = useState(false)
+  const [revisando, setRevisando] = useState(Boolean(archivoInicial))
   const [guardando, setGuardando] = useState(false)
 
   function limpiar() {
@@ -45,7 +45,7 @@ function ImportarPlanModal({ abierto, onCerrar, onImportado }) {
         if (!vigente) return
         if (!res.ok) {
           setRevision(null)
-          setError(json.error || 'No se pudo leer el archivo.')
+          setError(res.status >= 502 ? 'El servidor no responde. Verificá que el backend esté encendido.' : json.error || 'No se pudo leer el archivo.')
         } else {
           setRevision(json)
           setError('')
