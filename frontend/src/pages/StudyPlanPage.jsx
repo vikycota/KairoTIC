@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import ImportarPlanModal from './ImportarPlanModal'
 import { apiFetch } from '../api'
+import { useContador } from '../useContador'
 import '../pagesCSS/PlanEstudio.css'
 const CATEGORIAS = [
   { id: 'basicas-comunes', nombre: 'C. Básicas comunes', color: 'cat-blue' },
@@ -162,25 +163,6 @@ function totalCreditos(semestre) {
 
 function sinTildes(texto) {
   return texto.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim()
-}
-
-/** Número que sube de 0 al valor al aparecer (sin animación si la persona prefiere menos movimiento). */
-function useContador(objetivo) {
-  const reducido = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
-  const [valor, setValor] = useState(0)
-  useEffect(() => {
-    if (reducido) return
-    let cuadro
-    const inicio = performance.now()
-    const paso = (ahora) => {
-      const t = Math.min(1, (ahora - inicio) / 900)
-      setValor(Math.round(objetivo * (1 - (1 - t) ** 3)))
-      if (t < 1) cuadro = requestAnimationFrame(paso)
-    }
-    cuadro = requestAnimationFrame(paso)
-    return () => cancelAnimationFrame(cuadro)
-  }, [objetivo, reducido])
-  return reducido ? objetivo : valor
 }
 
 function Dato({ valor, etiqueta }) {

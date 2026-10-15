@@ -99,7 +99,7 @@ function App() {
 
         {vista === 'plan-estudio' && <StudyPlanPage />}
 
-        {vista === 'progreso' && <ProgresoPage emailUsuario={usuario.email} />}
+        {vista === 'progreso' && <ProgresoPage onIr={setVista} />}
 
         {vista === 'planificar' && <PlanPage />}
           
