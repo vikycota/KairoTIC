@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { EVENTO_SESION_VENCIDA } from './api'
 import './pagesCSS/SidebarMenu.css'
-import './pagesCSS/StudyPlanPage.css'
 import './App.css'
 import './PagesCSS/PlanPage.css'
 import "./pagesCSS/ConfigPage.css"
@@ -44,6 +44,12 @@ function App() {
     setVista('bienvenida')
   }
 
+  // Si el servidor rechaza el token (vencido, o sesión anterior sin token), se vuelve a la portada.
+  useEffect(() => {
+    window.addEventListener(EVENTO_SESION_VENCIDA, cerrarSesion)
+    return () => window.removeEventListener(EVENTO_SESION_VENCIDA, cerrarSesion)
+  })
+
   // Pantallas públicas: portada, login y registro
   if (!usuario && vista === 'login') {
     return (
@@ -86,7 +92,7 @@ function App() {
         
 
       <main className="app-content">
-        {vista === 'inicio' && <InicioPage nombreUsuario={usuario.nombre} onIr={setVista} />}
+        {vista === 'inicio' && <InicioPage nombreUsuario={usuario.nombre} emailUsuario={usuario.email} onIr={setVista} />}
 
         {vista === 'calendario' && <WeeklyPlanner />}
 

@@ -1,6 +1,7 @@
-from flask import Blueprint, Response, jsonify, request
+from flask import Blueprint, Response, g, jsonify, request
 from werkzeug.exceptions import HTTPException
 
+from auth import requiere_login
 from conexion import obtener_conexion
 from plan_parser import (
     PlanError,
@@ -228,53 +229,60 @@ def procesar_subida(cur):
 # PERSISTENCIA - CARRERA
 # ============================================================
 
+def propietario_de(cur, carrera):
+    """Devuelve (existe, propietario) de una carrera."""
+    cur.execute("SELECT Propietario FROM Carreras WHERE Nombre = %s", (carrera,))
+    fila = cur.fetchone()
+    return (True, fila[0]) if fila else (False, None)
+
+
+def es_de_otra_persona(cur, carrera, email):
+    """True si la carrera existe y pertenece a otro usuario (sin dueño = libre)."""
+    existe, propietario = propietario_de(cur, carrera)
+    return existe and propietario is not None and propietario != email
+
+
+MENSAJE_NOMBRE_EN_USO = (
+    "Ya existe un plan con ese nombre que pertenece a otra cuenta. "
+    "Elegí otro nombre de carrera."
+)
+
+
 def guardar_carrera(
     cur,
     carrera,
-    valor_credito
+    valor_credito,
+    propietario
 ):
     """
-    Crea la carrera si no existe.
+    Crea la carrera a nombre de `propietario`.
 
-    Si el archivo trae valor_credito,
-    también lo actualiza.
+    Si ya existía sin dueño (plan anterior a las cuentas), pasa a ser suya.
+    Si el archivo trae valor_credito, también lo actualiza.
     """
-
-    if valor_credito is not None:
-
-        cur.execute(
-            """
-            INSERT INTO Carreras (
-                Nombre,
-                Valor_Credito
-            )
-            VALUES (%s, %s)
-
-            ON CONFLICT (Nombre)
-            DO UPDATE SET
-                Valor_Credito =
-                    EXCLUDED.Valor_Credito
-            """,
-            (
-                carrera,
-                valor_credito
-            ),
-        )
-
-        return
 
     cur.execute(
         """
         INSERT INTO Carreras (
             Nombre,
-            Valor_Credito
+            Valor_Credito,
+            Propietario
         )
-        VALUES (%s, 0)
+        VALUES (%s, COALESCE(%s, 0), %s)
 
         ON CONFLICT (Nombre)
-        DO NOTHING
+        DO UPDATE SET
+            Valor_Credito =
+                COALESCE(%s, Carreras.Valor_Credito),
+            Propietario =
+                COALESCE(Carreras.Propietario, EXCLUDED.Propietario)
         """,
-        (carrera,),
+        (
+            carrera,
+            valor_credito,
+            propietario,
+            valor_credito,
+        ),
     )
 
 
@@ -289,18 +297,13 @@ def guardar_materia(
     """
     Inserta o actualiza una materia.
 
-    Código y categoría son opcionales.
+    La categoría es opcional.
     """
 
     nombre = materia["nombre"]
 
     creditos = int(
         materia["creditos"]
-    )
-
-    codigo = (
-        materia.get("codigo")
-        or None
     )
 
     categoria = (
@@ -312,17 +315,13 @@ def guardar_materia(
         """
         INSERT INTO Materias (
             Nombre,
-            Codigo,
             Cantidad_de_Creditos,
             Categoria
         )
-        VALUES (%s, %s, %s, %s)
+        VALUES (%s, %s, %s)
 
         ON CONFLICT (Nombre)
         DO UPDATE SET
-
-            Codigo =
-                EXCLUDED.Codigo,
 
             Cantidad_de_Creditos =
                 EXCLUDED.Cantidad_de_Creditos,
@@ -332,7 +331,6 @@ def guardar_materia(
         """,
         (
             nombre,
-            codigo,
             creditos,
             categoria,
         ),
@@ -589,13 +587,11 @@ def guardar_previas(
     materias
 ):
     """
-    El modelo actual de PostgreSQL admite
-    UNA previa por materia mediante:
+    Reemplaza las previas de cada materia del plan
+    (tabla Previas: una materia puede tener varias).
 
-        Materia_Previa_Nombre
-
-    Si el archivo contiene más de una previa,
-    se guarda solamente la primera.
+    Va después de insertar todas las materias
+    para no violar la clave foránea.
 
     Devuelve:
 
@@ -603,54 +599,51 @@ def guardar_previas(
         avisos
     """
 
-    total_previas = 0
+    nombres = [
+        materia["nombre"]
+        for materia in materias
+    ]
 
-    avisos = []
-
-    for materia in materias:
-
-        previas = (
-            materia.get("previas")
-            or []
-        )
-
-        previa = (
-            previas[0]
-            if previas
-            else None
-        )
-
-        if len(previas) > 1:
-
-            avisos.append(
-                (
-                    f"{materia['nombre']} tiene "
-                    f"{len(previas)} previas, pero "
-                    "la base actual solo permite "
-                    "guardar una. Se guardó la primera."
-                )
-            )
+    if nombres:
 
         cur.execute(
             """
-            UPDATE Materias
-
-            SET Materia_Previa_Nombre = %s
-
-            WHERE Nombre = %s
+            DELETE FROM Previas
+            WHERE Materias_Nombre = ANY(%s)
             """,
-            (
-                previa,
-                materia["nombre"]
-            ),
+            (nombres,),
         )
 
-        if previa:
+    total_previas = 0
+
+    for materia in materias:
+
+        for previa in (
+            materia.get("previas")
+            or []
+        ):
+
+            cur.execute(
+                """
+                INSERT INTO Previas (
+                    Materias_Nombre,
+                    Previa_Nombre
+                )
+                VALUES (%s, %s)
+
+                ON CONFLICT DO NOTHING
+                """,
+                (
+                    materia["nombre"],
+                    previa,
+                ),
+            )
+
             total_previas += 1
 
     return (
         total_previas,
-        avisos
+        []
     )
 
 
@@ -700,6 +693,7 @@ def descargar_plantilla_json():
     "/plan/preview",
     methods=["POST"]
 )
+@requiere_login
 def preview():
 
     conn = None
@@ -714,8 +708,17 @@ def preview():
                 procesar_subida(cur)
             )
 
-        if error:
-            return error
+            if error:
+                return error
+
+            if resultado.get("carrera") and es_de_otra_persona(
+                cur, resultado["carrera"], g.email
+            ):
+                resultado["errores"] = [
+                    *resultado.get("errores", []),
+                    MENSAJE_NOMBRE_EN_USO,
+                ]
+                resultado["valido"] = False
 
         return jsonify(
             resultado
@@ -750,6 +753,7 @@ def preview():
     "/plan/importar",
     methods=["POST"]
 )
+@requiere_login
 def importar():
 
     conn = None
@@ -781,6 +785,11 @@ def importar():
 
             carrera = resultado["carrera"]
 
+            if es_de_otra_persona(cur, carrera, g.email):
+                return jsonify({
+                    "error": MENSAJE_NOMBRE_EN_USO
+                }), 409
+
             materias = resultado["materias"]
 
             valor_credito = resultado.get(
@@ -795,7 +804,8 @@ def importar():
             guardar_carrera(
                 cur,
                 carrera,
-                valor_credito
+                valor_credito,
+                g.email
             )
 
 
@@ -902,6 +912,7 @@ def importar():
     "/carreras",
     methods=["GET"]
 )
+@requiere_login
 def listar_carreras():
 
     conn = None
@@ -939,6 +950,9 @@ def listar_carreras():
                     ON m.Nombre =
                        t.Materias_Nombre
 
+                WHERE
+                    c.Propietario = %s
+
                 GROUP BY
                     c.Nombre,
                     c.Valor_Credito
@@ -950,7 +964,8 @@ def listar_carreras():
 
                 ORDER BY
                     c.Nombre
-                """
+                """,
+                (g.email,),
             )
 
             filas = cur.fetchall()
@@ -1010,6 +1025,7 @@ def listar_carreras():
     "/plan",
     methods=["GET"]
 )
+@requiere_login
 def obtener_plan():
 
     carrera = (
@@ -1044,8 +1060,9 @@ def obtener_plan():
                 FROM Carreras
 
                 WHERE Nombre = %s
+                  AND Propietario = %s
                 """,
-                (carrera,),
+                (carrera, g.email),
             )
 
             fila_carrera = cur.fetchone()
@@ -1071,15 +1088,18 @@ def obtener_plan():
                 """
                 SELECT
 
-                    m.Codigo,
-
                     m.Nombre,
 
                     m.Cantidad_de_Creditos,
 
                     m.Categoria,
 
-                    m.Materia_Previa_Nombre,
+                    ARRAY(
+                        SELECT p.Previa_Nombre
+                        FROM Previas p
+                        WHERE p.Materias_Nombre = m.Nombre
+                        ORDER BY p.Previa_Nombre
+                    ),
 
                     s.Nombre,
 
@@ -1143,11 +1163,10 @@ def obtener_plan():
 
 
         for (
-            codigo,
             nombre,
             creditos,
             categoria,
-            previa,
+            previas,
             semestre_nombre,
             semestre_anio
 
@@ -1162,9 +1181,6 @@ def obtener_plan():
 
             materias.append({
 
-                "codigo":
-                    codigo,
-
                 "nombre":
                     nombre,
 
@@ -1178,11 +1194,7 @@ def obtener_plan():
                     numero_semestre,
 
                 "previas":
-                    (
-                        [previa]
-                        if previa
-                        else []
-                    ),
+                    list(previas),
             })
 
 
@@ -1210,6 +1222,135 @@ def obtener_plan():
             "error": str(error)
         }), 500
 
+
+    finally:
+
+        if conn:
+            conn.close()
+
+
+# ============================================================
+# ELIMINAR PLAN
+# ============================================================
+
+@plan_bp.route(
+    "/plan",
+    methods=["DELETE"]
+)
+@requiere_login
+def eliminar_plan():
+
+    carrera = (
+        request.args.get("carrera")
+        or ""
+    ).strip()
+
+    if not carrera:
+        return jsonify({
+            "error":
+                "Falta el parámetro 'carrera'."
+        }), 400
+
+    conn = None
+
+    try:
+
+        conn = obtener_conexion()
+
+        with conn.cursor() as cur:
+
+            existe, propietario = propietario_de(
+                cur,
+                carrera
+            )
+
+            # Un plan ajeno responde igual que uno inexistente.
+            if not existe or propietario != g.email:
+                return jsonify({
+                    "error":
+                        "El plan no existe."
+                }), 404
+
+            cur.execute(
+                """
+                SELECT Materias_Nombre
+                FROM Tiene
+                WHERE Carreras_Nombre = %s
+                """,
+                (carrera,),
+            )
+
+            materias = [
+                fila[0]
+                for fila in cur.fetchall()
+            ]
+
+            # Borra la carrera; Tiene se elimina en cascada.
+            cur.execute(
+                """
+                DELETE FROM Carreras
+                WHERE Nombre = %s
+                """,
+                (carrera,),
+            )
+
+            # Quita las materias que quedaron sin ninguna carrera
+            # y sin avance registrado por nadie.
+            if materias:
+
+                cur.execute("SAVEPOINT limpieza")
+
+                try:
+
+                    cur.execute(
+                        """
+                        DELETE FROM Materias m
+                        WHERE m.Nombre = ANY(%s)
+                          AND NOT EXISTS (
+                              SELECT 1 FROM Tiene t
+                              WHERE t.Materias_Nombre = m.Nombre
+                          )
+                          AND NOT EXISTS (
+                              SELECT 1 FROM Cursan c
+                              WHERE c.Materias_Nombre = m.Nombre
+                          )
+                        """,
+                        (materias,),
+                    )
+
+                except Exception as error:
+
+                    print(
+                        "No se pudieron limpiar "
+                        f"las materias: {error}"
+                    )
+
+                    cur.execute(
+                        "ROLLBACK TO SAVEPOINT limpieza"
+                    )
+
+        conn.commit()
+
+        return jsonify({
+            "message":
+                "Plan eliminado correctamente.",
+            "carrera":
+                carrera,
+        }), 200
+
+    except Exception as error:
+
+        if conn:
+            conn.rollback()
+
+        print(
+            f"Error al eliminar el plan: {error}"
+        )
+
+        return jsonify({
+            "error":
+                "Error interno del servidor."
+        }), 500
 
     finally:
 

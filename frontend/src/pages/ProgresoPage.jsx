@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { apiFetch } from '../api'
 import '../pagesCSS/ProgresoPage.css'
 
 const NOTA_MAXIMA = 12
@@ -40,7 +41,7 @@ function ProgresoPage({ emailUsuario }) {
   const [guardando, setGuardando] = useState(false)
 
   useEffect(() => {
-    fetch('/api/carreras')
+    apiFetch('/api/carreras')
       .then((res) => (res.ok ? res.json() : Promise.reject()))
       .then((data) => {
         setCarreras(data.carreras)
@@ -52,7 +53,7 @@ function ProgresoPage({ emailUsuario }) {
   useEffect(() => {
     if (!carrera) return
     let vigente = true
-    fetch(`/api/plan?carrera=${encodeURIComponent(carrera)}`)
+    apiFetch(`/api/plan?carrera=${encodeURIComponent(carrera)}`)
       .then((res) => (res.ok ? res.json() : Promise.reject()))
       .then((data) => vigente && setPlanMaterias(data.materias))
       .catch(() => vigente && setPlanMaterias([]))

@@ -3,6 +3,7 @@
 import bcrypt
 from flask import Blueprint, request, jsonify
 
+from auth import crear_token
 from conexion import obtener_conexion
 from validaciones import ValidationError, validar_email
 
@@ -64,6 +65,7 @@ def login():
                 "nombre": nombre,
                 "apellido": apellido,
                 "email": email,
+                "token": crear_token(email),
             },
         }), 200
 

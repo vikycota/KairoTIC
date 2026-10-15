@@ -3,6 +3,7 @@ import bcrypt
 from flask import Blueprint, request, jsonify
 from psycopg2 import errors
 
+from auth import crear_token
 from conexion import obtener_conexion
 from validaciones import (
     ValidationError,
@@ -59,7 +60,12 @@ def register():
         # Devuelve el usuario para que el frontend inicie sesión sin pedir el login.
         return jsonify({
             "message": "Usuario registrado correctamente.",
-            "usuario": {"nombre": nombre, "apellido": apellido, "email": email},
+            "usuario": {
+                "nombre": nombre,
+                "apellido": apellido,
+                "email": email,
+                "token": crear_token(email),
+            },
         }), 201
 
     except errors.UniqueViolation:

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import ImportarPlanModal from './ImportarPlanModal'
+import { apiFetch } from '../api'
 import '../pagesCSS/InicioPage.css'
 
 const DIAS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom']
@@ -124,10 +125,6 @@ function descargar(plantilla) {
   a.download = plantilla.archivo
   a.click()
   URL.revokeObjectURL(url)
-}
-
-async function leerJson(res) {
-  try { return await res.json() } catch { return {} }
 }
 
 /* ---------- componentes ---------- */
@@ -292,74 +289,32 @@ function CargadorBloques({ tipo, clave, titulo, descripcion, numero, etiqueta, o
 
 function CargadorPlan({ onVerPlan, onListo }) {
   const [modalAbierto, setModalAbierto] = useState(false)
-  const [importado, setImportado] = useState(() => {
-    try { return localStorage.getItem('kairo-plan-cargado') || '' } catch { return '' }
-  })
-  const [analizando, setAnalizando] = useState(false)
+  const [planes, setPlanes] = useState([])   // solo los planes de esta cuenta
   const [archivoModal, setArchivoModal] = useState(null)
-  const [pdf, setPdf] = useState(null)       // { archivo, plan }
-  const [guardando, setGuardando] = useState(false)
   const [errores, setErrores] = useState([])
 
-  function marcarImportado(nombre) {
-    setImportado(nombre)
-    try { localStorage.setItem('kairo-plan-cargado', nombre) } catch { /* opcional */ }
+  function cargarPlanes() {
+    apiFetch('/api/carreras')
+      .then((res) => res.ok ? res.json() : Promise.reject())
+      .then((data) => setPlanes((data.carreras ?? []).map((c) => c.nombre)))
+      .catch(() => {})
   }
 
-  async function alElegir(archivo) {
+  useEffect(cargarPlanes, [])
+
+  // PDF, CSV, XLSX y JSON pasan por el mismo modal de revisión y guardado.
+  function alElegir(archivo) {
     setErrores([])
-    if (/\.pdf$/i.test(archivo.name)) {
-      setAnalizando(true)
-      try {
-        const datos = new FormData()
-        datos.append('pdf', archivo)
-        const res = await fetch('/api/study-plan/import', { method: 'POST', body: datos })
-        const json = await leerJson(res)
-        if (!res.ok) throw new Error(json.error || 'No se pudo leer el PDF.')
-        setPdf({ archivo, plan: json })
-      } catch (e) {
-        setErrores([e.message === 'Failed to fetch' ? 'No se pudo conectar con el servidor.' : e.message])
-      } finally {
-        setAnalizando(false)
-      }
-    } else if (/\.(csv|xlsx|json)$/i.test(archivo.name)) {
+    if (/\.(pdf|csv|xlsx|json)$/i.test(archivo.name)) {
       setArchivoModal(archivo)
       setModalAbierto(true)
     } else {
-      setErrores(['Formato no admitido. Usá .csv, .xlsx, .json o .pdf.'])
+      setErrores(['Formato no admitido. Usá PDF, CSV, XLSX o JSON.'])
     }
   }
 
-  async function guardarPdf() {
-    setGuardando(true)
-    setErrores([])
-    const { plan } = pdf
-    const celdas = (t) => `"${String(t ?? '').replace(/"/g, '""')}"`
-    const filas = ['semestre;materia;creditos;categoria;previas']
-    for (const s of plan.semestres ?? []) {
-      for (const m of s.materias ?? []) {
-        filas.push([s.numero, celdas(m.nombre), Number(m.creditos) || 0, celdas(m.categoria), ''].join(';'))
-      }
-    }
-    const datos = new FormData()
-    datos.append('archivo', new Blob(['﻿' + filas.join('\r\n')], { type: 'text/csv' }), 'plan.csv')
-    datos.append('carrera', plan.carrera || pdf.archivo.name.replace(/\.pdf$/i, ''))
-    try {
-      const res = await fetch('/api/plan/importar', { method: 'POST', body: datos })
-      const json = await leerJson(res)
-      if (!res.ok) throw new Error(json.errores?.[0] || json.error || 'No se pudo guardar el plan.')
-      marcarImportado(json.carrera)
-      setPdf(null)
-    } catch (e) {
-      setErrores([e.message === 'Failed to fetch' ? 'No se pudo conectar con el servidor.' : e.message])
-    }
-    setGuardando(false)
-  }
-
-  useEffect(() => { onListo(Boolean(importado)) }, [importado, onListo])
-
-  const totalMaterias = pdf?.plan.semestres?.reduce((a, s) => a + (s.materias?.length ?? 0), 0) ?? 0
-  const listo = Boolean(importado)
+  const listo = planes.length > 0
+  useEffect(() => { onListo(listo) }, [listo, onListo])
 
   return (
     <Tarjeta
@@ -367,38 +322,15 @@ function CargadorPlan({ onVerPlan, onListo }) {
       titulo="Plan de estudio"
       descripcion="Tu carrera: materias, créditos y previas."
       estado={listo ? 'listo' : 'pendiente'}
-      resumen={listo ? `Plan activo: ${importado}` : ''}
+      resumen={listo ? `${planes.length === 1 ? 'Plan' : 'Planes'}: ${planes.join(', ')}` : ''}
     >
-      {!pdf && (
-        <>
-          <ZonaCarga
-            id="carga-plan"
-            aceptar=".pdf,.csv,.xlsx,.json"
-            etiqueta={analizando ? 'Analizando PDF…' : listo ? 'Cargar otro plan' : 'Subir plan de estudio'}
-            ayuda="PDF, CSV, XLSX o JSON. Arrastrá el archivo o hacé clic"
-            disabled={analizando}
-            onArchivo={alElegir}
-          />
-          {analizando && <div className="inicio-progreso" role="progressbar" aria-label="Analizando"><span /></div>}
-        </>
-      )}
-
-      {pdf && (
-        <div className="inicio-revision">
-          <p>
-            <strong>{pdf.plan.carrera || 'Carrera no identificada'}</strong>
-            <br />
-            Detectamos {pdf.plan.semestres?.length ?? 0} semestres y {totalMaterias} materias en <em>{pdf.archivo.name}</em>.
-            Revisá que sea correcto antes de guardar.
-          </p>
-          <div className="inicio-revision-botones">
-            <button type="button" className="inicio-btn inicio-btn--sec" onClick={() => setPdf(null)} disabled={guardando}>Descartar</button>
-            <button type="button" className="inicio-btn" onClick={guardarPdf} disabled={guardando || !totalMaterias}>
-              {guardando ? 'Guardando…' : 'Guardar plan'}
-            </button>
-          </div>
-        </div>
-      )}
+      <ZonaCarga
+        id="carga-plan"
+        aceptar=".pdf,.csv,.xlsx,.json"
+        etiqueta={listo ? 'Cargar otro plan' : 'Subir plan de estudio'}
+        ayuda="PDF, CSV, XLSX o JSON. Arrastrá el archivo o hacé clic"
+        onArchivo={alElegir}
+      />
 
       <Mensajes errores={errores} />
 
@@ -412,14 +344,14 @@ function CargadorPlan({ onVerPlan, onListo }) {
           abierto
           archivoInicial={archivoModal}
           onCerrar={() => setModalAbierto(false)}
-          onImportado={(nombre) => { setModalAbierto(false); marcarImportado(nombre) }}
+          onImportado={() => { setModalAbierto(false); cargarPlanes() }}
         />
       )}
     </Tarjeta>
   )
 }
 
-function InicioPage({ nombreUsuario, onIr }) {
+function InicioPage({ nombreUsuario, emailUsuario, onIr }) {
   const [listos, setListos] = useState({ plan: false, horarios: false, talleres: false })
   const marcar = useMemo(() => ({
     plan: (v) => setListos((l) => (l.plan === v ? l : { ...l, plan: v })),
@@ -446,7 +378,7 @@ function InicioPage({ nombreUsuario, onIr }) {
           <CargadorPlan onVerPlan={() => onIr?.('plan-estudio')} onListo={marcar.plan} />
           <CargadorBloques
             tipo="horarios"
-            clave={CLAVE_HORARIOS}
+            clave={`${CLAVE_HORARIOS}:${emailUsuario}`}
             numero={2}
             titulo="Horarios del semestre"
             descripcion="Días y horas de cada materia que se dicta."
@@ -455,7 +387,7 @@ function InicioPage({ nombreUsuario, onIr }) {
           />
           <CargadorBloques
             tipo="talleres"
-            clave={CLAVE_TALLERES}
+            clave={`${CLAVE_TALLERES}:${emailUsuario}`}
             numero={3}
             titulo="Talleres del semestre"
             descripcion="Talleres disponibles con su horario y cupos."

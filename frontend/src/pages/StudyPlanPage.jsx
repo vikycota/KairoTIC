@@ -1,6 +1,7 @@
-
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import ImportarPlanModal from './ImportarPlanModal'
+import { apiFetch } from '../api'
+import '../pagesCSS/PlanEstudio.css'
 const CATEGORIAS = [
   { id: 'basicas-comunes', nombre: 'C. Básicas comunes', color: 'cat-blue' },
   { id: 'basicas-especificas', nombre: 'C. Básicas específicas y Cs. de la Ingeniería', color: 'cat-lavender' },
@@ -113,57 +114,6 @@ const NOMBRES_SEMESTRE = [
   'Décimo',
 ]
 
-function normalizarCategoria(categoria) {
-  if (!categoria) return 'sin-categoria'
-
-  const valor = categoria.trim().toLowerCase()
-
-  // Si Ollama ya devolvió directamente el id
-  const porId = CATEGORIAS.find(
-    (cat) => cat.id.toLowerCase() === valor
-  )
-
-  if (porId) return porId.id
-
-  // Si devolvió el nombre visible
-  const porNombre = CATEGORIAS.find(
-    (cat) => cat.nombre.toLowerCase() === valor
-  )
-
-  if (porNombre) return porNombre.id
-
-  // Algunas variantes posibles
-  if (valor.includes('básicas específicas')) {
-    return 'basicas-especificas'
-  }
-
-  if (valor.includes('básicas comunes')) {
-    return 'basicas-comunes'
-  }
-
-  if (valor.includes('ingeniería aplicada')) {
-    return 'ingenieria-aplicada'
-  }
-
-  if (valor.includes('proyecto')) {
-    return 'proyecto-integrador'
-  }
-
-  if (valor.includes('informática')) {
-    return 'informatica-comunes'
-  }
-
-  if (valor.includes('social')) {
-    return 'cs-sociales'
-  }
-
-  if (valor.includes('electiv')) {
-    return 'electivas'
-  }
-
-  return 'sin-categoria'
-}
-
 const COLORES = CATEGORIAS.map((c) => c.color)
 const PLAN_EJEMPLO = { nombre: 'Plan de ejemplo', categorias: CATEGORIAS, semestres: SEMESTRES, extras: EXTRAS }
 
@@ -209,236 +159,433 @@ function totalCreditos(semestre) {
   return semestre.materias.reduce((acc, m) => acc + m.creditos, 0)
 }
 
-function StudyPlanPage() {
 
-  
-  const [archivoPlan, setArchivoPlan] = useState(null)
-  const [analizandoPlan, setAnalizandoPlan] = useState(false)
-  const [planImportado, setPlanImportado] = useState(null)
-  const [semestres, setSemestres] = useState(SEMESTRES)
-  const [carrera, setCarrera] = useState('')
+function sinTildes(texto) {
+  return texto.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim()
+}
+
+/** Número que sube de 0 al valor al aparecer (sin animación si la persona prefiere menos movimiento). */
+function useContador(objetivo) {
+  const reducido = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  const [valor, setValor] = useState(0)
+  useEffect(() => {
+    if (reducido) return
+    let cuadro
+    const inicio = performance.now()
+    const paso = (ahora) => {
+      const t = Math.min(1, (ahora - inicio) / 900)
+      setValor(Math.round(objetivo * (1 - (1 - t) ** 3)))
+      if (t < 1) cuadro = requestAnimationFrame(paso)
+    }
+    cuadro = requestAnimationFrame(paso)
+    return () => cancelAnimationFrame(cuadro)
+  }, [objetivo, reducido])
+  return reducido ? objetivo : valor
+}
+
+function Dato({ valor, etiqueta }) {
+  const n = useContador(valor)
+  return (
+    <div className="pe-dato">
+      <strong>{n}</strong>
+      <span>{etiqueta}</span>
+    </div>
+  )
+}
+
+const FORMATOS = [
+  { etiqueta: 'PDF', texto: 'El plan que te dio la facultad' },
+  { etiqueta: 'CSV', texto: 'Una fila por materia, desde Excel' },
+  { etiqueta: 'XLSX', texto: 'Planilla de Excel' },
+  { etiqueta: 'JSON', texto: 'Para quienes ya lo tienen armado' },
+]
+
+const PASOS_VACIO = [
+  { titulo: 'Subí tu archivo', texto: 'Arrastralo acá o elegilo desde tu computadora.' },
+  { titulo: 'Revisá la vista previa', texto: 'Verificás materias, créditos y previas antes de guardar.' },
+  { titulo: 'Explorá tu carrera', texto: 'Tablero por semestre, categorías y qué materia habilita a cuál.' },
+]
+
+// Columnas decorativas: cada chip es [categoría, ancho del texto en %]
+const ARTE = [
+  { sem: 1, chips: [['cat-blue', 70], ['cat-mint', 55], ['cat-sand', 80]] },
+  { sem: 2, chips: [['cat-lavender', 60], ['cat-coral', 75], ['cat-blue', 50]] },
+  { sem: 3, chips: [['cat-green', 65], ['cat-teal', 80]] },
+]
+
+function EstadoVacio({ error, onCargar, onEjemplo, onArchivo }) {
+  const [arrastrando, setArrastrando] = useState(false)
+
+  return (
+    <section className="pe-vacio">
+      {error && <p className="pe-alerta" role="alert">{error}</p>}
+
+      <div className="pe-vacio-principal">
+        <div className="pe-vacio-texto">
+          <span className="pe-vacio-sello">Empezá por acá</span>
+          <h2>Armá el mapa de tu carrera</h2>
+          <p>
+            Cargá tu plan de estudio y Kairo lo convierte en un tablero por semestre: créditos,
+            categorías y qué materia es previa de cuál, todo a la vista.
+          </p>
+          <div className="pe-vacio-botones">
+            <button type="button" className="pe-btn pe-btn--primario" onClick={onCargar}>Cargar mi plan</button>
+            <button type="button" className="pe-btn pe-btn--claro" onClick={onEjemplo}>Ver un ejemplo</button>
+          </div>
+          <a className="pe-vacio-plantilla" href="/api/plan/plantilla.csv">Descargar plantilla CSV</a>
+        </div>
+
+        <div
+          className={`pe-arte ${arrastrando ? 'pe-arte--activo' : ''}`}
+          onDragOver={(e) => { e.preventDefault(); setArrastrando(true) }}
+          onDragLeave={() => setArrastrando(false)}
+          onDrop={(e) => {
+            e.preventDefault()
+            setArrastrando(false)
+            const archivo = e.dataTransfer.files[0]
+            if (archivo) onArchivo(archivo)
+          }}
+        >
+          <div className="pe-arte-cols">
+            {ARTE.map((col, c) => (
+              <div className="pe-arte-col" key={col.sem} aria-hidden="true">
+                <span className="pe-arte-sem">{col.sem}</span>
+                {col.chips.map(([cat, ancho], i) => (
+                  <span className={`pe-arte-chip ${cat}`} key={i} style={{ '--d': `${(c * 3 + i) * 0.35}s` }}>
+                    <i style={{ width: `${ancho}%` }} />
+                  </span>
+                ))}
+              </div>
+            ))}
+            <button type="button" className="pe-arte-mas" onClick={onCargar}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 16V4m0 0l-4 4m4-4l4 4M4 16v3a1 1 0 001 1h14a1 1 0 001-1v-3" /></svg>
+              <span>{arrastrando ? 'Soltá el archivo' : 'Soltá tu plan acá'}</span>
+            </button>
+          </div>
+          <span className="pe-flota pe-flota--1" aria-hidden="true">PDF</span>
+          <span className="pe-flota pe-flota--2" aria-hidden="true">CSV</span>
+          <span className="pe-flota pe-flota--3" aria-hidden="true">XLSX</span>
+        </div>
+      </div>
+
+      <ul className="pe-formatos" aria-label="Formatos admitidos">
+        {FORMATOS.map((f) => (
+          <li key={f.etiqueta}>
+            <strong>{f.etiqueta}</strong>
+            <span>{f.texto}</span>
+          </li>
+        ))}
+      </ul>
+
+      <ol className="pe-vacio-pasos">
+        {PASOS_VACIO.map((p, i) => (
+          <li key={p.titulo}>
+            <span>{i + 1}</span>
+            <div>
+              <strong>{p.titulo}</strong>
+              <p>{p.texto}</p>
+            </div>
+          </li>
+        ))}
+      </ol>
+    </section>
+  )
+}
+
+function StudyPlanPage() {
   const [carreras, setCarreras] = useState([])
   const [seleccion, setSeleccion] = useState('')
   const [planApi, setPlanApi] = useState(null)
   const [errorPlan, setErrorPlan] = useState('')
   const [modalAbierto, setModalAbierto] = useState(false)
-    useEffect(() => {
-      fetch('/api/carreras')
-        .then((res) => res.ok ? res.json() : Promise.reject())
-        .then((data) => setCarreras(data.carreras ?? []))
-        .catch(() => setCarreras([]))
-    }, [])
+  const [confirmarBorrado, setConfirmarBorrado] = useState(false)
+  const [eliminando, setEliminando] = useState(false)
+  const [creditosCompletados, setCreditosCompletados] = useState({})
+  const [busqueda, setBusqueda] = useState('')
+  const [catActiva, setCatActiva] = useState(null)
+  const [materiaSel, setMateriaSel] = useState(null)   // nombre de la materia elegida
+  const [carrerasListas, setCarrerasListas] = useState(false)
+  const [verEjemplo, setVerEjemplo] = useState(false)
+  const [archivoModal, setArchivoModal] = useState(null)
 
-    useEffect(() => {
-      if (!seleccion) return
-      let vigente = true
-      fetch(`/api/plan?carrera=${encodeURIComponent(seleccion)}`)
-        .then((res) => res.ok ? res.json() : Promise.reject())
-        .then((data) => {
-          if (vigente) { setPlanApi(data); setErrorPlan('') }
-        })
-        .catch(() => vigente && setErrorPlan('No se pudo cargar el plan de esa carrera.'))
-      return () => { vigente = false }
-    }, [seleccion])
+  useEffect(() => {
+    apiFetch('/api/carreras')
+      .then((res) => res.ok ? res.json() : Promise.reject())
+      .then((data) => {
+        const lista = data.carreras ?? []
+        setCarreras(lista)
+        if (lista.length) setSeleccion((actual) => actual || lista[0].nombre)
+      })
+      .catch(() => setCarreras([]))
+      .finally(() => setCarrerasListas(true))
+  }, [])
 
-    const plan = useMemo(() => {
-      if (seleccion && planApi?.carrera === seleccion) return planDesdeApi(planApi)
-      return seleccion ? PLAN_EJEMPLO : { nombre: carrera || 'Plan de ejemplo', categorias: CATEGORIAS, semestres, extras: EXTRAS }
-    }, [seleccion, planApi, carrera, semestres])
-    const total = totalCreditosPlan(plan)
+  useEffect(() => {
+    if (!seleccion) return
+    let vigente = true
+    apiFetch(`/api/plan?carrera=${encodeURIComponent(seleccion)}`)
+      .then((res) => res.ok ? res.json() : Promise.reject())
+      .then((data) => {
+        if (vigente) { setPlanApi(data); setErrorPlan('') }
+      })
+      .catch(() => vigente && setErrorPlan('No se pudo cargar el plan de esa carrera.'))
+    return () => { vigente = false }
+  }, [seleccion])
 
-    // Busca la letra más grande con la que el tablero entra en la pantalla sin recortar nada,
-    // sin pasarse de lo que permite el ancho de las columnas (para no partir las palabras).
-    const tableroRef = useRef(null)
-    useLayoutEffect(() => {
-      const tablero = tableroRef.current
-      const pagina = tablero?.closest('.estudio-page')
-      if (!tablero || !pagina) return
+  const plan = useMemo(() => {
+    if (seleccion && planApi?.carrera === seleccion) return planDesdeApi(planApi)
+    return seleccion ? PLAN_EJEMPLO : { nombre: 'Plan de ejemplo', categorias: CATEGORIAS, semestres: SEMESTRES, extras: EXTRAS }
+  }, [seleccion, planApi])
 
-      function ajustar() {
-        const columnas = plan.semestres.length || 1
-        let min = 8
-        let max = Math.max(8, Math.min(18, tablero.clientWidth / columnas / 10))
-        for (let i = 0; i < 8; i++) {
-          const medio = (min + max) / 2
-          tablero.style.setProperty('--fs', `${medio}px`)
-          if (tablero.scrollHeight > tablero.clientHeight + 1) max = medio
-          else min = medio
-        }
-        tablero.style.setProperty('--fs', `${min}px`)
-      }
+  const vacio = carrerasListas && carreras.length === 0 && !verEjemplo
+  const sinPlan = !carrerasListas || vacio
+  const total = totalCreditosPlan(plan)
+  const nombrePlan = (plan.nombre || 'Plan de ejemplo').replace(/^\p{L}/u, (l) => l.toLocaleUpperCase('es'))
+  const todasLasMaterias = plan.semestres.flatMap((s) => s.materias ?? [])
+  const maxSemestre = Math.max(1, ...plan.semestres.map(totalCreditos))
+  const q = sinTildes(busqueda)
 
-      ajustar()
-      const observador = new ResizeObserver(ajustar)
-      observador.observe(pagina)
-      return () => observador.disconnect()
-    }, [plan])
+  const seleccionada = todasLasMaterias.find((m) => m.nombre === materiaSel) ?? null
+  const habilita = seleccionada
+    ? todasLasMaterias.filter((m) => m.previas?.includes(seleccionada.nombre)).map((m) => m.nombre)
+    : []
+  const semestreDeSel = seleccionada
+    ? plan.semestres.find((s) => s.materias?.includes(seleccionada))
+    : null
+  const catSel = seleccionada ? plan.categorias.find((c) => c.id === seleccionada.cat) : null
 
-    function alImportar(nombre) {
-      setModalAbierto(false)
-      fetch('/api/carreras').then((res) => res.json()).then((data) => setCarreras(data.carreras ?? [])).catch(() => {})
-      setSeleccion(nombre)
-    }
-
-    const [creditosCompletados, setCreditosCompletados] = useState({})
-  async function importarPlan() {
-    if (!archivoPlan) {return}
-    setAnalizandoPlan(true)
-    try {
-      const formData = new FormData()
-      formData.append(
-        'pdf',
-        archivoPlan)
-      const respuesta = await fetch(
-        '/api/study-plan/import',
-        {
-          method: 'POST',
-          body: formData
-        }
-      )
-      const datos = await respuesta.json()
-      if (!respuesta.ok) {
-        throw new Error(
-          datos.error ??
-          'No se pudo importar el plan')}
-      setPlanImportado(datos)
-      console.log(datos)
-    } catch (error) {
-      console.error(error)
-    } finally {
-      setAnalizandoPlan(false)
-    }
-  }
-  function cancelarImportacion() {
-    setPlanImportado(null)
-  }
-  function confirmarPlan() {
-    if (!planImportado) return
-
-    setCarrera(planImportado.carrera ?? '')
-
-    const nuevosSemestres = planImportado.semestres.map((semestre) => ({
-      numero: semestre.numero,
-
-      nombre:
-        NOMBRES_SEMESTRE[semestre.numero] ??
-        `Semestre ${semestre.numero}`,
-
-      materias: semestre.materias.map((materia) => ({
-        cat: normalizarCategoria(materia.categoria),
-        codigo: materia.codigo ?? '',
-        nombre: materia.nombre ?? '',
-
-        creditos: Number(materia.creditos) || 0,
-      })),
+  const categoriasConCreditos = plan.categorias
+    .map((cat) => ({
+      cat,
+      creditos: plan.semestres.reduce((acc, s) => acc + materiasDe(s, cat.id).reduce((a, m) => a + m.creditos, 0), 0),
     }))
+    .filter(({ creditos }) => creditos > 0)
 
-    setSemestres(nuevosSemestres)
-    setSeleccion('')
-
-    setPlanImportado(null)
-    setArchivoPlan(null)
+  function alImportar(nombre) {
+    setModalAbierto(false)
+    cargarCarreras()
+    setVerEjemplo(false)
+    setSeleccion(nombre)
   }
 
+  function cargarCarreras(elegirPrimera = false) {
+    apiFetch('/api/carreras')
+      .then((res) => res.ok ? res.json() : Promise.reject())
+      .then((data) => {
+        const lista = data.carreras ?? []
+        setCarreras(lista)
+        if (elegirPrimera && lista.length) setSeleccion((actual) => actual || lista[0].nombre)
+      })
+      .catch(() => {})
+  }
 
-  function agregarCredito(nombre, maximo) {
-    setCreditosCompletados((anteriores) => {
-      const actuales = anteriores[nombre] ?? 0
+  function abrirCarga(archivo = null) {
+    setArchivoModal(archivo)
+    setModalAbierto(true)
+  }
 
-      return {
-        ...anteriores,
-        [nombre]: Math.min(actuales + 1, maximo)
+  async function eliminarPlan() {
+    setEliminando(true)
+    setErrorPlan('')
+    try {
+      const res = await apiFetch(`/api/plan?carrera=${encodeURIComponent(seleccion)}`, { method: 'DELETE' })
+      if (!res.ok) {
+        let json = {}
+        try { json = await res.json() } catch { /* sin JSON */ }
+        throw new Error(res.status >= 502 ? 'El servidor no responde. Verificá que el backend esté encendido.' : json.error || 'No se pudo eliminar el plan.')
       }
-    })
+      setConfirmarBorrado(false)
+      setPlanApi(null)
+      setMateriaSel(null)
+      setSeleccion('')
+      cargarCarreras(true)
+    } catch (e) {
+      setErrorPlan(e.message === 'Failed to fetch' ? 'No se pudo conectar con el servidor.' : e.message)
+      setConfirmarBorrado(false)
+    } finally {
+      setEliminando(false)
+    }
   }
 
-  function quitarCredito(nombre, maximo) {
-    setCreditosCompletados((anteriores) => {
-      const actuales = anteriores[nombre] ?? 0
-
-      return {
-        ...anteriores,
-        [nombre]: Math.max(actuales - 1, 0)
-      }
-    })
+  function cambiarCredito(nombre, maximo, delta) {
+    setCreditosCompletados((anteriores) => ({
+      ...anteriores,
+      [nombre]: Math.min(maximo, Math.max(0, (anteriores[nombre] ?? 0) + delta)),
+    }))
   }
+
   return (
-    <main className="estudio-page">
-      <section className="estudio-card">
-        <header className="estudio-header">
-            <div className="estudio-header-text">
-                <h1 className="estudio-title">Plan de estudio</h1>
-                <p className="estudio-subtitle">
-                Materias por semestre y créditos ECTS
-                </p>
+    <main className="pe-page">
+      {/* ---------- Cabecera ---------- */}
+      <header className="pe-hero">
+        <span className="pe-blob pe-blob--1" aria-hidden="true" />
+        <span className="pe-blob pe-blob--2" aria-hidden="true" />
+
+        <div className="pe-hero-fila">
+          <div>
+            <span className="pe-etiqueta">Plan de estudio</span>
+            <h1>{sinPlan ? 'Tu plan de estudio' : nombrePlan}</h1>
+            <p>
+              {sinPlan
+                ? 'Todavía no cargaste ninguno. Empezá subiendo el de tu carrera.'
+                : 'Materias por semestre y créditos ECTS. Tocá una materia para ver sus previas.'}
+            </p>
+          </div>
+
+          <div className="pe-acciones">
+            {carreras.length > 0 && (
+              <select className="pe-select" value={seleccion} onChange={(e) => setSeleccion(e.target.value)} aria-label="Carrera" title={seleccion || 'Plan de ejemplo'}>
+                <option value="" disabled={!verEjemplo}>Plan de ejemplo</option>
+                {carreras.map((item) => <option key={item.nombre} value={item.nombre}>{item.nombre}</option>)}
+              </select>
+            )}
+            <button type="button" className="pe-btn pe-btn--rosa" onClick={() => abrirCarga()}>
+              Cargar plan de estudio
+            </button>
+            {seleccion && !sinPlan && (
+              <button type="button" className="pe-btn pe-btn--peligro" onClick={() => setConfirmarBorrado(true)}>
+                Eliminar plan
+              </button>
+            )}
+          </div>
+        </div>
+
+        {!sinPlan && <div className="pe-datos">
+          <Dato valor={total} etiqueta="ECTS en total" />
+          <Dato valor={plan.semestres.length} etiqueta="semestres" />
+          <Dato valor={todasLasMaterias.length} etiqueta="materias" />
+          <Dato valor={categoriasConCreditos.length} etiqueta="categorías" />
+        </div>}
+      </header>
+
+      {!carrerasListas && (
+        <div className="pe-contenido pe-esqueleto" aria-busy="true" aria-label="Cargando">
+          <span /><span /><span />
+        </div>
+      )}
+
+      {vacio && (
+        <EstadoVacio
+          error={errorPlan}
+          onCargar={() => abrirCarga()}
+          onEjemplo={() => { setVerEjemplo(true); setSeleccion('') }}
+          onArchivo={(archivo) => abrirCarga(archivo)}
+        />
+      )}
+
+      {!sinPlan && (
+      <div className="pe-contenido">
+        {verEjemplo && carreras.length === 0 && (
+          <div className="pe-ejemplo" role="status">
+            <span>Estás viendo un plan de ejemplo.</span>
+            <div>
+              <button type="button" className="pe-btn pe-btn--primario" onClick={() => abrirCarga()}>Cargar mi plan</button>
+              <button type="button" className="pe-btn pe-btn--claro" onClick={() => setVerEjemplo(false)}>Volver</button>
             </div>
+          </div>
+        )}
+        {errorPlan && <p className="pe-alerta" role="alert">{errorPlan}</p>}
 
-            <div className="estudio-header-buttons">
-                <div className="add-plan-button">
-                    {carreras.length > 0 && (
-                      <select className="plan-select" value={seleccion} onChange={(e) => setSeleccion(e.target.value)} aria-label="Carrera">
-                        <option value="">Plan de ejemplo</option>
-                        {carreras.map((item) => <option key={item.nombre} value={item.nombre}>{item.nombre}</option>)}
-                      </select>
-                    )}
-                    <button type="button" onClick={() => setModalAbierto(true)}>Agregar plan de estudio</button>
-                    <input
-                      type="file"
-                      accept=".pdf"
-                      onChange={(e) => {
-                        setArchivoPlan(e.target.files[0])
-                      }}
-                    />
+        {/* ---------- Búsqueda y filtros ---------- */}
+        <section className="pe-filtros" aria-label="Filtros">
+          <label className="pe-buscar">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="M20 20l-3.5-3.5" /></svg>
+            <input
+              type="search"
+              placeholder="Buscar materia…"
+              value={busqueda}
+              onChange={(e) => setBusqueda(e.target.value)}
+              aria-label="Buscar materia"
+            />
+          </label>
 
-                    <button
-                      type="button"
-                      onClick={importarPlan}
-                      disabled={!archivoPlan || analizandoPlan}
-                    >
-                      {analizandoPlan
-                        ? 'Analizando...'
-                        : 'Importar plan'}
-                    </button>
+          <div className="pe-leyenda">
+            {categoriasConCreditos.map(({ cat, creditos }) => (
+              <button
+                type="button"
+                key={cat.id}
+                className={`pe-cat ${cat.color} ${catActiva === cat.id ? 'pe-cat--activa' : ''}`}
+                aria-pressed={catActiva === cat.id}
+                onClick={() => setCatActiva((a) => (a === cat.id ? null : cat.id))}
+              >
+                <i aria-hidden="true" />
+                {cat.nombre} <strong>{creditos}</strong>
+              </button>
+            ))}
+          </div>
+        </section>
 
+        {/* ---------- Detalle de la materia elegida ---------- */}
+        {seleccionada && (
+          <aside className="pe-detalle" aria-live="polite">
+            <div className={`pe-detalle-marca ${catSel?.color ?? ''}`} aria-hidden="true" />
+            <div className="pe-detalle-cuerpo">
+              <h2>{seleccionada.nombre}</h2>
+              <p>
+                {semestreDeSel?.nombre} semestre · {seleccionada.creditos} ECTS{catSel ? ` · ${catSel.nombre}` : ''}
+              </p>
+              <div className="pe-detalle-listas">
+                <div>
+                  <span>Previas</span>
+                  {seleccionada.previas?.length
+                    ? <ul>{seleccionada.previas.map((p) => <li className="pe-prev" key={p}>{p}</li>)}</ul>
+                    : <em>Sin previas</em>}
                 </div>
+                <div>
+                  <span>Habilita</span>
+                  {habilita.length
+                    ? <ul>{habilita.map((p) => <li className="pe-sig" key={p}>{p}</li>)}</ul>
+                    : <em>No es previa de otras materias</em>}
                 </div>
-            </header>
+              </div>
+            </div>
+            <button type="button" className="pe-cerrar" onClick={() => setMateriaSel(null)} aria-label="Cerrar detalle">×</button>
+          </aside>
+        )}
 
-        {errorPlan && <p className="plan-error" role="alert">{errorPlan}</p>}
-
-        <div
-          className="plan-tablero"
-          lang="es"
-          ref={tableroRef}
-          style={{ '--columnas': plan.semestres.map((s) => (s.especial ? 'minmax(0, 0.9fr)' : 'minmax(0, 1fr)')).join(' ') }}
-        >
-          {plan.semestres.map((s) => (
-            <section className="plan-semestre" key={s.numero}>
-              <header className="plan-semestre-cabecera">
-                <span className="plan-sem-nombre">{s.nombre}</span>
-                <span className="plan-sem-creditos">{totalCreditos(s)} ECTS</span>
+        {/* ---------- Tablero por semestre ---------- */}
+        <div className="pe-tablero" lang="es">
+          {plan.semestres.map((s, i) => (
+            <section className="pe-semestre" key={s.numero} style={{ '--i': i }}>
+              <header>
+                <span className="pe-sem-num">{s.numero}</span>
+                <div className="pe-sem-titulo">
+                  <strong>{s.nombre}</strong>
+                  <span>{totalCreditos(s)} ECTS</span>
+                </div>
+                <div className="pe-sem-barra" aria-hidden="true">
+                  <span style={{ width: `${(totalCreditos(s) / maxSemestre) * 100}%` }} />
+                </div>
               </header>
-              <div className="plan-semestre-materias">
+
+              <div className="pe-materias">
                 {s.especial ? (
-                  <span className="estudio-chip plan-chip-internacional">
+                  <span className="pe-internacional">
                     {s.especial}: {s.creditosElectivos} créd. electivos
                   </span>
                 ) : (
                   s.materias.map((m) => {
                     const cat = plan.categorias.find((c) => c.id === m.cat)
-                    const ayuda = [
-                      cat?.nombre,
-                      m.previas?.length ? `Previas: ${m.previas.join(', ')}` : null,
-                    ].filter(Boolean).join(' · ')
+                    const visible = (!catActiva || m.cat === catActiva) && (!q || sinTildes(m.nombre).includes(q))
+                    const estado = m.nombre === materiaSel
+                      ? 'pe-materia--sel'
+                      : seleccionada?.previas?.includes(m.nombre)
+                        ? 'pe-materia--previa'
+                        : habilita.includes(m.nombre)
+                          ? 'pe-materia--siguiente'
+                          : ''
                     return (
-                      <span
-                        className={`estudio-chip ${cat?.color ?? ''}`}
+                      <button
+                        type="button"
                         key={m.nombre}
-                        title={ayuda || undefined}
+                        className={`pe-materia ${cat?.color ?? ''} ${estado} ${visible ? '' : 'pe-materia--tenue'}`}
+                        aria-pressed={m.nombre === materiaSel}
+                        title={cat?.nombre}
+                        onClick={() => setMateriaSel((a) => (a === m.nombre ? null : m.nombre))}
                       >
-                        <span className="estudio-chip-texto">{m.nombre}</span>
-                        <span className="plan-chip-creditos">{m.creditos}</span>
-                      </span>
+                        <span className="pe-materia-nombre">{m.nombre}</span>
+                        <span className="pe-materia-cred">{m.creditos}</span>
+                      </button>
                     )
                   })
                 )}
@@ -447,168 +594,56 @@ function StudyPlanPage() {
           ))}
         </div>
 
-        <div className="plan-leyenda">
-          {plan.categorias.map((cat) => ({
-            cat,
-            creditos: plan.semestres.reduce(
-              (acc, s) => acc + materiasDe(s, cat.id).reduce((a, m) => a + m.creditos, 0),
-              0
-            ),
-          })).filter(({ creditos }) => creditos > 0).map(({ cat, creditos }) => (
-            <span className={`plan-leyenda-item ${cat.color}`} key={cat.id}>
-              {cat.nombre} <strong>{creditos}</strong>
-            </span>
-          ))}
-        </div>
-
-        <div className="plan-extras">
+        {/* ---------- Extras y total ---------- */}
+        <section className="pe-extras" aria-label="Créditos adicionales">
           {plan.extras.map((e) => {
             const completados = creditosCompletados[e.nombre] ?? 0
-
             return (
-              <div className="plan-extra-card" key={e.nombre}>
-                <span className="plan-extra-nombre">
-                  {e.nombre}
-                </span>
-
-                <div className="plan-extra-progreso">
-                  <span className="plan-extra-creditos">
-                    {completados}/{e.creditos} ECTS
-                  </span>
-
-                  <button
-                    type="button"
-                    className="plan-extra-button"
-                    onClick={() => agregarCredito(e.nombre, e.creditos)}
-                  >
-                    +
-                  </button>
-
-                  <button
-                    type="button"
-                    className="plan-extra-button"
-                    onClick={() => quitarCredito(e.nombre, e.creditos)}
-                  >
-                    -
-                  </button>
+              <div className="pe-extra" key={e.nombre}>
+                <div className="pe-extra-cab">
+                  <strong>{e.nombre}</strong>
+                  <span>{completados}/{e.creditos} ECTS</span>
+                </div>
+                <div className="pe-extra-barra"><span style={{ width: `${(completados / e.creditos) * 100}%` }} /></div>
+                <div className="pe-extra-botones">
+                  <button type="button" onClick={() => cambiarCredito(e.nombre, e.creditos, -1)} aria-label={`Quitar un crédito de ${e.nombre}`}>−</button>
+                  <button type="button" onClick={() => cambiarCredito(e.nombre, e.creditos, 1)} aria-label={`Sumar un crédito a ${e.nombre}`}>+</button>
                 </div>
               </div>
             )
           })}
-          <div className="plan-extra-card plan-extra-total">
-            <span className="plan-extra-nombre">Total de la carrera</span>
-            <span className="plan-extra-creditos">{total} ECTS</span>
+          <div className="pe-extra pe-extra--total">
+            <div className="pe-extra-cab">
+              <strong>Total de la carrera</strong>
+              <span>{total} ECTS</span>
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      </div>
+      )}
 
-      {planImportado && (
-        <div className="plan-modal-overlay">
-
-          <div className="plan-modal">
-
-            <div className="plan-modal-header">
-
-              <div>
-                <h2 className="plan-modal-title">
-                  Plan de estudio detectado
-                </h2>
-
-                <p className="plan-modal-carrera">
-                  {planImportado.carrera ?? 'Carrera no identificada'}
-                </p>
-              </div>
-
-              <button
-                type="button"
-                className="plan-modal-cerrar"
-                onClick={cancelarImportacion}
-                aria-label="Cerrar"
-              >
-                ×
+      {confirmarBorrado && (
+        <div className="pe-modal-fondo" onMouseDown={(e) => e.target === e.currentTarget && !eliminando && setConfirmarBorrado(false)}>
+          <div className="pe-modal pe-modal--confirmar" role="alertdialog" aria-modal="true" aria-labelledby="pe-borrar-titulo" aria-describedby="pe-borrar-texto">
+            <header>
+              <h2 id="pe-borrar-titulo">¿Eliminar este plan?</h2>
+            </header>
+            <p id="pe-borrar-texto" className="pe-confirmar-texto">
+              Se va a eliminar <strong>{seleccion}</strong> con todas sus materias. Esta acción no se puede deshacer.
+            </p>
+            <footer>
+              <button type="button" className="pe-btn pe-btn--claro" onClick={() => setConfirmarBorrado(false)} disabled={eliminando}>Cancelar</button>
+              <button type="button" className="pe-btn pe-btn--rojo" onClick={eliminarPlan} disabled={eliminando}>
+                {eliminando ? 'Eliminando…' : 'Eliminar plan'}
               </button>
-
-            </div>
-
-
-            <div className="plan-modal-content">
-
-              {planImportado.semestres?.map((semestre) => (
-
-                <div
-                  className="plan-modal-semestre"
-                  key={semestre.numero}
-                >
-
-                  <h3>
-                    Semestre {semestre.numero}
-                  </h3>
-
-                  <div className="plan-modal-materias">
-
-                    {semestre.materias?.map((materia, index) => (
-
-                      <div
-                        className="plan-modal-materia"
-                        key={`${semestre.numero}-${index}`}
-                      >
-
-                        <div className="plan-modal-materia-info">
-
-                          <span className="plan-modal-materia-nombre">
-                            {materia.nombre}
-                          </span>
-
-                          {materia.categoria && (
-                            <span className="plan-modal-materia-categoria">
-                              {materia.categoria}
-                            </span>
-                          )}
-
-                        </div>
-
-                        <span className="plan-modal-materia-creditos">
-                          {materia.creditos} ECTS
-                        </span>
-
-                      </div>
-
-                    ))}
-
-                  </div>
-
-                </div>
-
-              ))}
-
-            </div>
-
-
-            <div className="plan-modal-actions">
-
-              <button
-                type="button"
-                className="plan-modal-cancelar"
-                onClick={cancelarImportacion}
-              >
-                Cancelar
-              </button>
-
-              <button
-                type="button"
-                className="plan-modal-confirmar"
-                onClick={confirmarPlan}
-              >
-                Confirmar plan
-              </button>
-
-            </div>
-
+            </footer>
           </div>
-
         </div>
       )}
-      <ImportarPlanModal abierto={modalAbierto} onCerrar={() => setModalAbierto(false)} onImportado={alImportar} />
+
+      {modalAbierto && (
+        <ImportarPlanModal abierto archivoInicial={archivoModal} onCerrar={() => setModalAbierto(false)} onImportado={alImportar} />
+      )}
     </main>
   )
 }
