@@ -2,9 +2,7 @@ import { useEffect, useState } from 'react'
 import { EVENTO_SESION_VENCIDA } from './api'
 import './pagesCSS/SidebarMenu.css'
 import './App.css'
-import './PagesCSS/PlanPage.css'
 import "./pagesCSS/ConfigPage.css"
-import "./pagesCSS/WeeklyPlanner.css"
 
 import BienvenidaPage from './pages/BienvenidaPage'
 import LoginPage from './pages/LoginPage'
@@ -95,13 +93,13 @@ function App() {
       <main className="app-content">
         {vista === 'inicio' && <InicioPage nombreUsuario={usuario.nombre} emailUsuario={usuario.email} onIr={setVista} />}
 
-        {vista === 'calendario' && <WeeklyPlanner />}
+        {vista === 'calendario' && <WeeklyPlanner emailUsuario={usuario.email} onIr={setVista} />}
 
         {vista === 'plan-estudio' && <StudyPlanPage />}
 
         {vista === 'progreso' && <ProgresoPage onIr={setVista} />}
 
-        {vista === 'planificar' && <PlanPage />}
+        {vista === 'planificar' && <PlanPage emailUsuario={usuario.email} onIr={setVista} />}
           
         {vista === 'ajustes' && <ConfigPage />}
       </main>
