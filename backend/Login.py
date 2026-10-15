@@ -3,6 +3,7 @@
 import bcrypt
 from flask import Blueprint, request, jsonify
 
+from auth import crear_token
 from conexion import obtener_conexion
 from validaciones import ValidationError, validar_email
 
@@ -23,9 +24,13 @@ def login():
 
     try:
         email = validar_email(data.get("email"))
+    except ValidationError as e:
+        return jsonify({"error": e.message, "campo": "email"}), 400
+
+    try:
         password = validar_password_login(data.get("password"))
     except ValidationError as e:
-        return jsonify({"error": e.message}), 400
+        return jsonify({"error": e.message, "campo": "password"}), 400
 
     conn = None
     try:
@@ -41,12 +46,18 @@ def login():
 
 
         if not fila:
-            return jsonify({"error": "Email o contraseña incorrectos."}), 401
+            return jsonify({
+                "error": "No encontramos una cuenta con ese email.",
+                "campo": "email",
+            }), 401
 
         nombre, apellido, hashed_str = fila
 
         if not bcrypt.checkpw(password.encode("utf-8"), hashed_str.encode("utf-8")):
-            return jsonify({"error": "Email o contraseña incorrectos."}), 401
+            return jsonify({
+                "error": "La contraseña es incorrecta.",
+                "campo": "password",
+            }), 401
 
         return jsonify({
             "message": "Login exitoso.",
@@ -54,6 +65,7 @@ def login():
                 "nombre": nombre,
                 "apellido": apellido,
                 "email": email,
+                "token": crear_token(email),
             },
         }), 200
 

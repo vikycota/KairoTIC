@@ -65,7 +65,8 @@ def validar_nombre_persona(valor, nombre_campo):
     detectar_intento_sql_injection(valor, nombre_campo)
     if not re.match(r"^[A-Za-zÀ-ÿñÑ\s]+$", valor):
         raise ValidationError(f"El campo '{nombre_campo}' solo puede contener letras y espacios.")
-    return valor
+    # Cada palabra empieza con mayúscula ("maría josé" -> "María José").
+    return " ".join(p[:1].upper() + p[1:] for p in valor.split())
 
 
 # ---------- Protección contra inyección SQL ----------

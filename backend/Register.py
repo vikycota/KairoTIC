@@ -3,6 +3,7 @@ import bcrypt
 from flask import Blueprint, request, jsonify
 from psycopg2 import errors
 
+from auth import crear_token
 from conexion import obtener_conexion
 from validaciones import (
     ValidationError,
@@ -20,13 +21,20 @@ def register():
     if not data:
         return jsonify({"error": "Body inválido o faltante."}), 400
 
-    try:
-        nombre = validar_nombre_persona(data.get("nombre"), "nombre")
-        apellido = validar_nombre_persona(data.get("apellido"), "apellido")
-        email = validar_email(data.get("email"))
-        password = validar_password(data.get("password"))
-    except ValidationError as e:
-        return jsonify({"error": e.message}), 400
+    validadores = (
+        ("nombre", lambda: validar_nombre_persona(data.get("nombre"), "nombre")),
+        ("apellido", lambda: validar_nombre_persona(data.get("apellido"), "apellido")),
+        ("email", lambda: validar_email(data.get("email"))),
+        ("password", lambda: validar_password(data.get("password"))),
+    )
+    valores = {}
+    for campo, validar in validadores:
+        try:
+            valores[campo] = validar()
+        except ValidationError as e:
+            return jsonify({"error": e.message, "campo": campo}), 400
+    nombre, apellido = valores["nombre"], valores["apellido"]
+    email, password = valores["email"], valores["password"]
 
     # Hasheo de la contraseña -- nunca se guarda en texto plano.
     password_bytes = password.encode("utf-8")
@@ -49,12 +57,21 @@ def register():
         conn.commit()
         cur.close()
 
-        return jsonify({"message": "Usuario registrado correctamente."}), 201
+        # Devuelve el usuario para que el frontend inicie sesión sin pedir el login.
+        return jsonify({
+            "message": "Usuario registrado correctamente.",
+            "usuario": {
+                "nombre": nombre,
+                "apellido": apellido,
+                "email": email,
+                "token": crear_token(email),
+            },
+        }), 201
 
     except errors.UniqueViolation:
         if conn:
             conn.rollback()
-        return jsonify({"error": "Ese email ya está registrado."}), 409
+        return jsonify({"error": "Ese email ya está registrado.", "campo": "email"}), 409
 
     except Exception as e:
         if conn:

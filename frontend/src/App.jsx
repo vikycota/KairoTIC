@@ -1,13 +1,10 @@
-import { useState } from 'react'
-import './pagesCSS/LoginPage.css'
-import './pagesCSS/RegisterPage.css'
+import { useEffect, useState } from 'react'
+import { EVENTO_SESION_VENCIDA } from './api'
 import './pagesCSS/SidebarMenu.css'
-import './pagesCSS/StudyPlanPage.css'
 import './App.css'
-import './PagesCSS/PlanPage.css'
 import "./pagesCSS/ConfigPage.css"
-import "./pagesCSS/WeeklyPlanner.css"
 
+import BienvenidaPage from './pages/BienvenidaPage'
 import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
 import WeeklyPlanner from './pages/WeeklyPlanner'
@@ -17,6 +14,7 @@ import easteregg from './assets/easteregg.webp'
 import PlanPage from './pages/PlanPage'
 import ProgresoPage from './pages/ProgresoPage'
 import ConfigPage from "./pages/ConfigPage"
+import InicioPage from './pages/InicioPage'
 
 function App() {
   const [usuario, setUsuario] = useState(() => {
@@ -26,14 +24,14 @@ function App() {
       return null
     }
   })
-  const [vista, setVista] = useState(usuario ? 'calendario' : 'login')
+  const [vista, setVista] = useState(usuario ? 'inicio' : 'bienvenida')
 
   function iniciarSesion(datos) {
     setUsuario(datos)
     try {
       localStorage.setItem('kairo-usuario', JSON.stringify(datos))
     } catch { /* sin almacenamiento: la sesión dura hasta recargar */ }
-    setVista('calendario')
+    setVista('inicio')
   }
 
   function cerrarSesion() {
@@ -41,24 +39,41 @@ function App() {
     try {
       localStorage.removeItem('kairo-usuario')
     } catch { /* nada que limpiar */ }
-    setVista('login')
+    setVista('bienvenida')
   }
 
-  // Pantalla de login
-  if (!usuario && vista !== 'register') {
+  // Si el servidor rechaza el token (vencido, o sesión anterior sin token), se vuelve a la portada.
+  useEffect(() => {
+    window.addEventListener(EVENTO_SESION_VENCIDA, cerrarSesion)
+    return () => window.removeEventListener(EVENTO_SESION_VENCIDA, cerrarSesion)
+  })
+
+  // Pantallas públicas: portada, login y registro
+  if (!usuario && vista === 'login') {
     return (
       <LoginPage
         onLogin={iniciarSesion}
         onSwitchToRegister={() => setVista('register')}
+        onBack={() => setVista('bienvenida')}
       />
     )
   }
 
-  // Pantalla de registro
-  if (!usuario) {
+  if (!usuario && vista === 'register') {
     return (
       <RegisterPage
+        onRegistrado={iniciarSesion}
         onSwitchToLogin={() => setVista('login')}
+        onBack={() => setVista('bienvenida')}
+      />
+    )
+  }
+
+  if (!usuario) {
+    return (
+      <BienvenidaPage
+        onLogin={iniciarSesion}
+        onSwitchToRegister={() => setVista('register')}
       />
     )
   }
@@ -69,19 +84,22 @@ function App() {
 
       <SidebarMenu
         itemActivo={vista}
+        usuario={usuario}
         onSeleccionar={setVista}
         onCerrarSesion={cerrarSesion}
       />
         
 
       <main className="app-content">
-        {vista === 'calendario' && <WeeklyPlanner />}
+        {vista === 'inicio' && <InicioPage nombreUsuario={usuario.nombre} emailUsuario={usuario.email} onIr={setVista} />}
+
+        {vista === 'calendario' && <WeeklyPlanner emailUsuario={usuario.email} onIr={setVista} />}
 
         {vista === 'plan-estudio' && <StudyPlanPage />}
 
-        {vista === 'progreso' && <ProgresoPage emailUsuario={usuario.email} />}
+        {vista === 'progreso' && <ProgresoPage onIr={setVista} />}
 
-        {vista === 'planificar' && <PlanPage />}
+        {vista === 'planificar' && <PlanPage emailUsuario={usuario.email} onIr={setVista} />}
           
         {vista === 'ajustes' && <ConfigPage />}
       </main>
