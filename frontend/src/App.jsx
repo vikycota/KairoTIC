@@ -8,7 +8,7 @@ import './PagesCSS/PlanPage.css'
 import "./pagesCSS/ConfigPage.css"
 import "./pagesCSS/WeeklyPlanner.css"
 
-import LoginPage from './pages/LoginPage'
+import BienvenidaPage from './pages/BienvenidaPage'
 import RegisterPage from './pages/RegisterPage'
 import WeeklyPlanner from './pages/WeeklyPlanner'
 import SidebarMenu from './pages/SidebarMenu'
@@ -48,7 +48,7 @@ function App() {
   // Pantalla de login
   if (!usuario && vista !== 'register') {
     return (
-      <LoginPage
+      <BienvenidaPage
         onLogin={iniciarSesion}
         onSwitchToRegister={() => setVista('register')}
       />
