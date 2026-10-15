@@ -86,6 +86,7 @@ function App() {
 
       <SidebarMenu
         itemActivo={vista}
+        usuario={usuario}
         onSeleccionar={setVista}
         onCerrarSesion={cerrarSesion}
       />

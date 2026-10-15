@@ -335,7 +335,6 @@ function CargadorPlan({ onVerPlan, onListo }) {
       <Mensajes errores={errores} />
 
       <footer className="inicio-acciones">
-        <a className="inicio-enlace" href="/api/plan/plantilla.csv">Descargar plantilla CSV</a>
         {listo && <button type="button" className="inicio-enlace" onClick={onVerPlan}>Ver plan →</button>}
       </footer>
 

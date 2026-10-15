@@ -199,10 +199,6 @@ function ImportarPlanModal({ abierto, archivoInicial = null, onCerrar, onImporta
             Con CSV, XLSX o JSON, cada fila es una materia: semestre, materia, créditos, categoría y previas
             (varias previas se separan con “;”). Guardar reemplaza el plan anterior de esa carrera.
           </p>
-          <p className="importar-plantillas">
-            Plantillas: <a href="/api/plan/plantilla.csv">CSV para Excel</a> · <a href="/api/plan/plantilla.json">JSON</a>
-          </p>
-
           <div className="importar-campos">
             <label
               className={`importar-archivo ${arrastrando ? 'importar-archivo--activo' : ''}`}

@@ -232,7 +232,6 @@ function EstadoVacio({ error, onCargar, onEjemplo, onArchivo }) {
             <button type="button" className="pe-btn pe-btn--primario" onClick={onCargar}>Cargar mi plan</button>
             <button type="button" className="pe-btn pe-btn--claro" onClick={onEjemplo}>Ver un ejemplo</button>
           </div>
-          <a className="pe-vacio-plantilla" href="/api/plan/plantilla.csv">Descargar plantilla CSV</a>
         </div>
 
         <div
