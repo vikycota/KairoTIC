@@ -210,6 +210,37 @@
   overflow-wrap: anywhere;
 }
 
+.inicio-grilla .inicio-talleres-periodo {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+}
+
+.inicio-grilla .inicio-talleres-periodo .schedule-file-field,
+.inicio-grilla .inicio-talleres-periodo .schedule-primary {
+  grid-column: 1 / -1;
+}
+
+.inicio-horarios-importador .schedule-import-card {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.inicio-horarios-importador .schedule-import-form {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+}
+
+.inicio-horarios-importador .schedule-file-field,
+.inicio-horarios-importador .schedule-import-form .schedule-primary {
+  grid-column: 1 / -1;
+}
+
+@media (max-width: 560px) {
+  .inicio-horarios-importador .schedule-import-form { grid-template-columns: 1fr; }
+  .inicio-horarios-importador .schedule-file-field,
+  .inicio-horarios-importador .schedule-import-form .schedule-primary { grid-column: auto; }
+}
+
 /* --- Zona de carga --- */
 .inicio-zona {
   display: flex;
@@ -469,6 +500,12 @@
     flex-direction: column-reverse;
     align-items: stretch;
     text-align: center;
+  }
+}
+
+@media (max-width: 560px) {
+  .inicio-grilla .inicio-talleres-periodo {
+    grid-template-columns: 1fr;
   }
 }
 

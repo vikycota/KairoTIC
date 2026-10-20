@@ -6,6 +6,7 @@ export function generarCombinacionesHorario(
   materiasSeleccionadas,
   horariosPorMateria,
   limite = LIMITE_COMBINACIONES,
+  bloquesFijos = [],
 ) {
   const materias = Object.entries(materiasSeleccionadas)
     .filter(([, estado]) => estado.seleccionada)
@@ -16,7 +17,8 @@ export function generarCombinacionesHorario(
     }))
 
   const cantidadTotal = materias.reduce((total, materia) => total * materia.grupos.length, 1)
-  if (!materias.length || materias.some(({ grupos }) => grupos.length === 0)) {
+  if (!materias.length || materias.some(({ grupos }) => grupos.length === 0)
+    || !detectarConflictosHorario(bloquesFijos).compatible) {
     return { combinaciones: [], cantidadTotal: 0, truncado: false }
   }
 
@@ -49,6 +51,6 @@ export function generarCombinacionesHorario(
     }
   }
 
-  buscar(0, {}, [])
+  buscar(0, {}, [...bloquesFijos])
   return { combinaciones, cantidadTotal, truncado }
 }

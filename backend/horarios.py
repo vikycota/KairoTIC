@@ -1,9 +1,10 @@
 """Endpoints de importación y consulta de bloques horarios."""
 import logging
 
-from flask import Blueprint, Response, jsonify, request
+from flask import Blueprint, Response, g, jsonify, request
 from werkzeug.exceptions import HTTPException
 
+from auth import requiere_login
 from conexion import obtener_conexion
 from horario_parser import HorarioError, leer_archivo_horarios, plantilla_csv, plantilla_json, plantilla_xlsx
 from horario_service import guardar_horarios, listar_horarios, validar_metadata
@@ -21,7 +22,7 @@ def _analizar(cur):
     errores = list(errores_parser)
     carrera = (request.form.get("carrera") or "").strip()
     resultado = validar_metadata(cur, carrera, request.form.get("anio_lectivo"),
-                                 request.form.get("semestre_lectivo"), bloques, errores)
+                                 request.form.get("semestre_lectivo"), bloques, errores, g.email)
     return resultado
 
 
@@ -44,6 +45,7 @@ def descargar_xlsx():
 
 
 @horarios_bp.post("/horarios/preview")
+@requiere_login
 def preview():
     conn = None
     try:
@@ -65,6 +67,7 @@ def preview():
 
 
 @horarios_bp.post("/horarios/importar")
+@requiere_login
 def importar():
     conn = None
     try:
@@ -95,6 +98,7 @@ def importar():
 
 
 @horarios_bp.get("/horarios")
+@requiere_login
 def consultar():
     carrera = (request.args.get("carrera") or "").strip()
     try:
@@ -110,6 +114,12 @@ def consultar():
     try:
         conn = obtener_conexion()
         with conn.cursor() as cur:
+            cur.execute(
+                "SELECT 1 FROM Pertenecen_A WHERE Carreras_Nombre = %s AND Email = %s",
+                (carrera, g.email),
+            )
+            if not cur.fetchone():
+                return jsonify({"error": "La carrera seleccionada no está asociada a tu cuenta."}), 404
             bloques = listar_horarios(cur, carrera, anio, semestre)
         return jsonify({"carrera": carrera, "anio_lectivo": anio, "semestre_lectivo": semestre, "bloques": bloques}), 200
     except Exception:

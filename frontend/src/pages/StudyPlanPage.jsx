@@ -3,124 +3,17 @@ import ImportarPlanModal from './ImportarPlanModal'
 import { apiFetch } from '../api'
 import { useContador } from '../useContador'
 import '../pagesCSS/PlanEstudio.css'
-const CATEGORIAS = [
-  { id: 'basicas-comunes', nombre: 'C. Básicas comunes', color: 'cat-blue' },
-  { id: 'basicas-especificas', nombre: 'C. Básicas específicas y Cs. de la Ingeniería', color: 'cat-lavender' },
-  { id: 'ingenieria-aplicada', nombre: 'Ingeniería aplicada', color: 'cat-indigo' },
-  { id: 'proyecto-integrador', nombre: 'Proyecto integrador', color: 'cat-coral' },
-  { id: 'comunes-ingenieria', nombre: 'Comunes ingeniería', color: 'cat-mint' },
-  { id: 'informatica-comunes', nombre: 'Informática comunes', color: 'cat-green' },
-  { id: 'core-curriculum', nombre: 'Core curriculum', color: 'cat-sand' },
-  { id: 'cs-sociales', nombre: 'Cs. sociales', color: 'cat-slate' },
-  { id: 'electivas', nombre: 'Electivas', color: 'cat-teal' },
-  { id: 'sin-categoria', nombre: 'Sin categoría', color: 'cat-slate' },
-]
-
-
-
-const SEMESTRES = [
-  { numero: 1, nombre: 'Primer', creditos: 32, materias: [
-    { cat: 'basicas-comunes', nombre: 'Análisis Mat. I', creditos: 10 },
-    { cat: 'basicas-comunes', nombre: 'Álgebra Lineal', creditos: 10 },
-    { cat: 'informatica-comunes', nombre: 'Programación I', creditos: 6 },
-    { cat: 'comunes-ingenieria', nombre: 'Taller de Ingeniería', creditos: 4 },
-    { cat: 'electivas', nombre: 'Taller', creditos: 2 },
-  ]},
-  { numero: 2, nombre: 'Segundo', creditos: 36, materias: [
-    { cat: 'basicas-comunes', nombre: 'Análisis Mat. II', creditos: 10 },
-    { cat: 'basicas-comunes', nombre: 'Álg. Lineal numérica', creditos: 8 },
-    { cat: 'basicas-comunes', nombre: 'Física', creditos: 8 },
-    { cat: 'informatica-comunes', nombre: 'Diseño de Base de Datos I', creditos: 6 },
-    { cat: 'core-curriculum', nombre: 'Antropología', creditos: 3 },
-    { cat: 'electivas', nombre: 'Taller', creditos: 1 },
-  ]},
-  { numero: 3, nombre: 'Tercer', creditos: 36, materias: [
-    { cat: 'basicas-especificas', nombre: 'Matemática Discreta', creditos: 8 },
-    { cat: 'basicas-especificas', nombre: 'Lógica', creditos: 4 },
-    { cat: 'ingenieria-aplicada', nombre: 'Programación II', creditos: 6 },
-    { cat: 'ingenieria-aplicada', nombre: 'Diseño de Base de Datos II', creditos: 6 },
-    { cat: 'ingenieria-aplicada', nombre: 'Sistemas Digitales', creditos: 8 },
-    { cat: 'core-curriculum', nombre: 'Economía', creditos: 3 },
-    { cat: 'electivas', nombre: 'Taller', creditos: 1 },
-  ]},
-  { numero: 4, nombre: 'Cuarto', creditos: 36, materias: [
-    { cat: 'basicas-especificas', nombre: 'Análisis y Diseño de Algoritmos', creditos: 6 },
-    { cat: 'ingenieria-aplicada', nombre: 'Teoría de la Computación', creditos: 6 },
-    { cat: 'ingenieria-aplicada', nombre: 'Redes de Datos I', creditos: 6 },
-    { cat: 'proyecto-integrador', nombre: 'Proyecto TIC I', creditos: 6 },
-    { cat: 'core-curriculum', nombre: 'Historia contemporánea', creditos: 3 },
-    { cat: 'electivas', nombre: 'Taller', creditos: 3 },
-  ]},
-  { numero: 5, nombre: 'Quinto', creditos: 36, materias: [
-    { cat: 'basicas-comunes', nombre: 'Probabilidad', creditos: 6 },
-    { cat: 'ingenieria-aplicada', nombre: 'Ingeniería de Software I', creditos: 6 },
-    { cat: 'ingenieria-aplicada', nombre: 'Arquitectura y Diseño de Apl.', creditos: 8 },
-    { cat: 'ingenieria-aplicada', nombre: 'Infraestructura Informática', creditos: 6 },
-    { cat: 'ingenieria-aplicada', nombre: 'Sistemas Operativos', creditos: 8 },
-    { cat: 'core-curriculum', nombre: 'Ética General', creditos: 2 },
-  ]},
-  { numero: 6, nombre: 'Sexto', creditos: 30, materias: [
-    { cat: 'ingenieria-aplicada', nombre: 'Ingeniería de Software II', creditos: 8 },
-    { cat: 'ingenieria-aplicada', nombre: 'Sistemas Distribuidos', creditos: 6 },
-    { cat: 'comunes-ingenieria', nombre: 'Investigación Operativa', creditos: 4 },
-    { cat: 'comunes-ingenieria', nombre: 'Creatividad e Innovación', creditos: 4 },
-    { cat: 'comunes-ingenieria', nombre: 'Análisis de Datos', creditos: 4 },
-    { cat: 'cs-sociales', nombre: 'Contabilidad y Costos', creditos: 3 },
-    { cat: 'electivas', nombre: 'Taller', creditos: 1 },
-  ]},
-  { numero: 7, nombre: 'Séptimo', creditos: 32, materias: [
-    { cat: 'ingenieria-aplicada', nombre: 'Programación Avanzada', creditos: 6 },
-    { cat: 'ingenieria-aplicada', nombre: 'Seguridad Informática', creditos: 6 },
-    { cat: 'ingenieria-aplicada', nombre: 'Gestión Avanzada de Datos', creditos: 6 },
-    { cat: 'ingenieria-aplicada', nombre: 'UI/UX', creditos: 4 },
-    { cat: 'ingenieria-aplicada', nombre: 'Testing - QA Automatizado', creditos: 4 },
-    { cat: 'comunes-ingenieria', nombre: 'Metodología de la Investigación', creditos: 2 },
-    { cat: 'comunes-ingenieria', nombre: 'Estadística Aplicada', creditos: 2 },
-    { cat: 'cs-sociales', nombre: 'Cuestiones de Teología', creditos: 2 },
-  ]},
-  { numero: 8, nombre: 'Octavo', especial: 'Semestre Internacional', creditosElectivos: 30 },
-  { numero: 9, nombre: 'Noveno', creditos: 30, materias: [
-    { cat: 'comunes-ingenieria', nombre: 'Gestión de Tecnologías y la Info.', creditos: 4 },
-    { cat: 'proyecto-integrador', nombre: 'Proyecto Final de la Carrera', creditos: 6 },
-    { cat: 'comunes-ingenieria', nombre: 'Gestión y Planificación de Proyecto', creditos: 3 },
-    { cat: 'cs-sociales', nombre: 'Elementos de Gestión Empresarial', creditos: 3 },
-    { cat: 'electivas', nombre: 'Específica I', creditos: 4 },
-    { cat: 'electivas', nombre: 'Específica II', creditos: 4 },
-    { cat: 'electivas', nombre: 'Específica III', creditos: 6 },
-  ]},
-  { numero: 10, nombre: 'Décimo', creditos: 30, materias: [
-    { cat: 'cs-sociales', nombre: 'Derecho Informático', creditos: 4 },
-    { cat: 'proyecto-integrador', nombre: 'Proyecto Final de la Carrera', creditos: 14 },
-    { cat: 'comunes-ingenieria', nombre: 'Liderazgo y Gestión de Personas', creditos: 3 },
-    { cat: 'cs-sociales', nombre: 'Finanzas y Proyectos de Inversión', creditos: 3 },
-    { cat: 'electivas', nombre: 'Diploma', creditos: 6 },
-  ]},
-]
-
-const EXTRAS = [
-  { nombre: 'Pasantía', creditos: 20 },
-  { nombre: 'Actividades sociales', creditos: 5 },
+const COLORES = [
+  'cat-blue', 'cat-lavender', 'cat-indigo', 'cat-coral', 'cat-mint',
+  'cat-green', 'cat-sand', 'cat-slate', 'cat-teal',
 ]
 const NOMBRES_SEMESTRE = [
-  '',
-  'Primer',
-  'Segundo',
-  'Tercer',
-  'Cuarto',
-  'Quinto',
-  'Sexto',
-  'Séptimo',
-  'Octavo',
-  'Noveno',
-  'Décimo',
+  '', 'Primer', 'Segundo', 'Tercer', 'Cuarto', 'Quinto',
+  'Sexto', 'Séptimo', 'Octavo', 'Noveno', 'Décimo',
 ]
-
-const COLORES = CATEGORIAS.map((c) => c.color)
-const PLAN_EJEMPLO = { nombre: 'Plan de ejemplo', categorias: CATEGORIAS, semestres: SEMESTRES, extras: EXTRAS }
-
 function totalCreditosPlan(plan) {
   return plan.semestres.reduce((acc, s) => acc + totalCreditos(s), 0) +
-    plan.extras.reduce((acc, e) => acc + e.creditos, 0)
+    (plan.extras ?? []).reduce((acc, e) => acc + e.creditos, 0)
 }
 
 function planDesdeApi(data) {
@@ -195,7 +88,7 @@ const ARTE = [
   { sem: 3, chips: [['cat-green', 65], ['cat-teal', 80]] },
 ]
 
-function EstadoVacio({ error, onCargar, onEjemplo, onArchivo }) {
+function EstadoVacio({ error, onCargar, onArchivo }) {
   const [arrastrando, setArrastrando] = useState(false)
 
   return (
@@ -212,7 +105,6 @@ function EstadoVacio({ error, onCargar, onEjemplo, onArchivo }) {
           </p>
           <div className="pe-vacio-botones">
             <button type="button" className="pe-btn pe-btn--primario" onClick={onCargar}>Cargar mi plan</button>
-            <button type="button" className="pe-btn pe-btn--claro" onClick={onEjemplo}>Ver un ejemplo</button>
           </div>
         </div>
 
@@ -276,8 +168,8 @@ function EstadoVacio({ error, onCargar, onEjemplo, onArchivo }) {
 function StudyPlanPage() {
   const [carreras, setCarreras] = useState([])
   const [seleccion, setSeleccion] = useState('')
-  const [planApi, setPlanApi] = useState(null)
-  const [errorPlan, setErrorPlan] = useState('')
+  const [respuestaPlan, setRespuestaPlan] = useState(null)
+  const [errorOperacion, setErrorOperacion] = useState('')
   const [modalAbierto, setModalAbierto] = useState(false)
   const [confirmarBorrado, setConfirmarBorrado] = useState(false)
   const [eliminando, setEliminando] = useState(false)
@@ -286,11 +178,10 @@ function StudyPlanPage() {
   const [catActiva, setCatActiva] = useState(null)
   const [materiaSel, setMateriaSel] = useState(null)   // nombre de la materia elegida
   const [carrerasListas, setCarrerasListas] = useState(false)
-  const [verEjemplo, setVerEjemplo] = useState(false)
   const [archivoModal, setArchivoModal] = useState(null)
 
   useEffect(() => {
-    apiFetch('/api/carreras')
+    apiFetch('/api/carreras', { cache: 'no-store' })
       .then((res) => res.ok ? res.json() : Promise.reject())
       .then((data) => {
         const lista = data.carreras ?? []
@@ -302,28 +193,31 @@ function StudyPlanPage() {
   }, [])
 
   useEffect(() => {
-    if (!seleccion) return
+    if (!seleccion) return undefined
     let vigente = true
     apiFetch(`/api/plan?carrera=${encodeURIComponent(seleccion)}`)
       .then((res) => res.ok ? res.json() : Promise.reject())
       .then((data) => {
-        if (vigente) { setPlanApi(data); setErrorPlan('') }
+        if (vigente) setRespuestaPlan({ carrera: seleccion, data, error: '' })
       })
-      .catch(() => vigente && setErrorPlan('No se pudo cargar el plan de esa carrera.'))
+      .catch(() => vigente && setRespuestaPlan({ carrera: seleccion, data: null, error: 'No se pudo cargar el plan de esa carrera.' }))
     return () => { vigente = false }
   }, [seleccion])
 
+  const respuestaPlanActual = respuestaPlan?.carrera === seleccion
+  const errorPlan = (respuestaPlanActual ? respuestaPlan.error : '') || errorOperacion
   const plan = useMemo(() => {
-    if (seleccion && planApi?.carrera === seleccion) return planDesdeApi(planApi)
-    return seleccion ? PLAN_EJEMPLO : { nombre: 'Plan de ejemplo', categorias: CATEGORIAS, semestres: SEMESTRES, extras: EXTRAS }
-  }, [seleccion, planApi])
+    if (seleccion && respuestaPlanActual && respuestaPlan.data) return planDesdeApi(respuestaPlan.data)
+    return null
+  }, [seleccion, respuestaPlanActual, respuestaPlan])
 
-  const vacio = carrerasListas && carreras.length === 0 && !verEjemplo
-  const sinPlan = !carrerasListas || vacio
-  const total = totalCreditosPlan(plan)
-  const nombrePlan = (plan.nombre || 'Plan de ejemplo').replace(/^\p{L}/u, (l) => l.toLocaleUpperCase('es'))
-  const todasLasMaterias = plan.semestres.flatMap((s) => s.materias ?? [])
-  const maxSemestre = Math.max(1, ...plan.semestres.map(totalCreditos))
+  const vacio = carrerasListas && carreras.length === 0
+  const cargando = !carrerasListas || Boolean(seleccion && !respuestaPlanActual)
+  const sinPlan = !plan
+  const total = plan ? totalCreditosPlan(plan) : 0
+  const nombrePlan = plan?.nombre?.replace(/^\p{L}/u, (l) => l.toLocaleUpperCase('es')) || 'Tu plan de estudio'
+  const todasLasMaterias = plan?.semestres.flatMap((s) => s.materias ?? []) ?? []
+  const maxSemestre = Math.max(1, ...(plan?.semestres ?? []).map(totalCreditos))
   const q = sinTildes(busqueda)
 
   const seleccionada = todasLasMaterias.find((m) => m.nombre === materiaSel) ?? null
@@ -331,33 +225,45 @@ function StudyPlanPage() {
     ? todasLasMaterias.filter((m) => m.previas?.includes(seleccionada.nombre)).map((m) => m.nombre)
     : []
   const semestreDeSel = seleccionada
-    ? plan.semestres.find((s) => s.materias?.includes(seleccionada))
+    ? plan?.semestres.find((s) => s.materias?.includes(seleccionada))
     : null
-  const catSel = seleccionada ? plan.categorias.find((c) => c.id === seleccionada.cat) : null
+  const catSel = seleccionada ? plan?.categorias.find((c) => c.id === seleccionada.cat) : null
 
-  const categoriasConCreditos = plan.categorias
+  const categoriasConCreditos = (plan?.categorias ?? [])
     .map((cat) => ({
       cat,
-      creditos: plan.semestres.reduce((acc, s) => acc + materiasDe(s, cat.id).reduce((a, m) => a + m.creditos, 0), 0),
+      creditos: (plan?.semestres ?? []).reduce((acc, s) => acc + materiasDe(s, cat.id).reduce((a, m) => a + m.creditos, 0), 0),
     }))
     .filter(({ creditos }) => creditos > 0)
 
   function alImportar(nombre) {
     setModalAbierto(false)
-    cargarCarreras()
-    setVerEjemplo(false)
-    setSeleccion(nombre)
+    setErrorOperacion('')
+    cargarCarreras(false, nombre)
   }
 
-  function cargarCarreras(elegirPrimera = false) {
-    apiFetch('/api/carreras')
-      .then((res) => res.ok ? res.json() : Promise.reject())
-      .then((data) => {
-        const lista = data.carreras ?? []
-        setCarreras(lista)
-        if (elegirPrimera && lista.length) setSeleccion((actual) => actual || lista[0].nombre)
-      })
-      .catch(() => {})
+  async function cargarCarreras(elegirPrimera = false, carreraImportada = '') {
+    try {
+      const res = await apiFetch('/api/carreras', { cache: 'no-store' })
+      if (!res.ok) throw new Error('No se pudieron cargar las carreras.')
+      const data = await res.json()
+      let lista = data.carreras ?? []
+      if (carreraImportada && !lista.some((item) => item.nombre === carreraImportada)) {
+        lista = [...lista, { nombre: carreraImportada }].sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'))
+      }
+      setCarreras(lista)
+      if (carreraImportada) setSeleccion(carreraImportada)
+      else if (elegirPrimera && lista.length) setSeleccion((actual) => actual || lista[0].nombre)
+      return lista
+    } catch {
+      if (carreraImportada) {
+        setCarreras((actuales) => actuales.some((item) => item.nombre === carreraImportada)
+          ? actuales
+          : [...actuales, { nombre: carreraImportada }].sort((a, b) => a.nombre.localeCompare(b.nombre, 'es')))
+        setSeleccion(carreraImportada)
+      }
+      return []
+    }
   }
 
   function abrirCarga(archivo = null) {
@@ -367,7 +273,7 @@ function StudyPlanPage() {
 
   async function eliminarPlan() {
     setEliminando(true)
-    setErrorPlan('')
+    setErrorOperacion('')
     try {
       const res = await apiFetch(`/api/plan?carrera=${encodeURIComponent(seleccion)}`, { method: 'DELETE' })
       if (!res.ok) {
@@ -376,12 +282,12 @@ function StudyPlanPage() {
         throw new Error(res.status >= 502 ? 'El servidor no responde. Verificá que el backend esté encendido.' : json.error || 'No se pudo eliminar el plan.')
       }
       setConfirmarBorrado(false)
-      setPlanApi(null)
+      setRespuestaPlan(null)
       setMateriaSel(null)
       setSeleccion('')
       cargarCarreras(true)
     } catch (e) {
-      setErrorPlan(e.message === 'Failed to fetch' ? 'No se pudo conectar con el servidor.' : e.message)
+      setErrorOperacion(e.message === 'Failed to fetch' ? 'No se pudo conectar con el servidor.' : e.message)
       setConfirmarBorrado(false)
     } finally {
       setEliminando(false)
@@ -405,18 +311,18 @@ function StudyPlanPage() {
         <div className="pe-hero-fila">
           <div>
             <span className="pe-etiqueta">Plan de estudio</span>
-            <h1>{sinPlan ? 'Tu plan de estudio' : nombrePlan}</h1>
+            <h1>{nombrePlan}</h1>
             <p>
-              {sinPlan
-                ? 'Todavía no cargaste ninguno. Empezá subiendo el de tu carrera.'
-                : 'Materias por semestre y créditos ECTS. Tocá una materia para ver sus previas.'}
+              {plan
+                ? 'Materias por semestre y créditos ECTS. Tocá una materia para ver sus previas.'
+                : errorPlan || 'Cargá el plan real de tu carrera para ver materias, créditos y previas.'}
             </p>
           </div>
 
           <div className="pe-acciones">
             {carreras.length > 0 && (
-              <select className="pe-select" value={seleccion} onChange={(e) => setSeleccion(e.target.value)} aria-label="Carrera" title={seleccion || 'Plan de ejemplo'}>
-                <option value="" disabled={!verEjemplo}>Plan de ejemplo</option>
+              <select className="pe-select" value={seleccion} onChange={(e) => { setErrorOperacion(''); setSeleccion(e.target.value); setMateriaSel(null) }} aria-label="Carrera" title={seleccion || 'Seleccionar carrera'}>
+                <option value="">Seleccionar carrera</option>
                 {carreras.map((item) => <option key={item.nombre} value={item.nombre}>{item.nombre}</option>)}
               </select>
             )}
@@ -439,7 +345,7 @@ function StudyPlanPage() {
         </div>}
       </header>
 
-      {!carrerasListas && (
+      {cargando && (
         <div className="pe-contenido pe-esqueleto" aria-busy="true" aria-label="Cargando">
           <span /><span /><span />
         </div>
@@ -447,26 +353,19 @@ function StudyPlanPage() {
 
       {vacio && (
         <EstadoVacio
-          error={errorPlan}
           onCargar={() => abrirCarga()}
-          onEjemplo={() => { setVerEjemplo(true); setSeleccion('') }}
           onArchivo={(archivo) => abrirCarga(archivo)}
         />
       )}
 
-      {!sinPlan && (
-      <div className="pe-contenido">
-        {verEjemplo && carreras.length === 0 && (
-          <div className="pe-ejemplo" role="status">
-            <span>Estás viendo un plan de ejemplo.</span>
-            <div>
-              <button type="button" className="pe-btn pe-btn--primario" onClick={() => abrirCarga()}>Cargar mi plan</button>
-              <button type="button" className="pe-btn pe-btn--claro" onClick={() => setVerEjemplo(false)}>Volver</button>
-            </div>
-          </div>
-        )}
-        {errorPlan && <p className="pe-alerta" role="alert">{errorPlan}</p>}
+      {errorPlan && carrerasListas && (seleccion || errorOperacion) && !cargando && (
+        <div className="pe-contenido">
+          <p className="pe-alerta" role="alert">{errorPlan}</p>
+        </div>
+      )}
 
+      {plan && (
+      <div className="pe-contenido">
         {/* ---------- Búsqueda y filtros ---------- */}
         <section className="pe-filtros" aria-label="Filtros">
           <label className="pe-buscar">

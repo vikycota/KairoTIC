@@ -716,24 +716,6 @@
 .pe-vacio-pasos strong { color: var(--violeta); font-size: 15px; }
 .pe-vacio-pasos p { margin: 3px 0 0; color: var(--suave); font-size: 14px; line-height: 1.5; }
 
-/* Banner del plan de ejemplo */
-.pe-ejemplo {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 12px 16px;
-  border-radius: 14px;
-  background: #ece6ff;
-  color: #3b2a8f;
-  font-size: 14px;
-  font-weight: 500;
-}
-
-.pe-ejemplo div { display: flex; gap: 8px; }
-.pe-ejemplo .pe-btn { padding: 8px 16px; }
-
 /* Carga inicial */
 .pe-esqueleto { flex-direction: row; gap: 16px; }
 

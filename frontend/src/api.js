@@ -1,4 +1,5 @@
 const EVENTO_SESION_VENCIDA = 'kairo-sesion-expirada'
+const EVENTO_CARRERAS_ACTUALIZADAS = 'kairo-carreras-actualizadas'
 
 function tokenActual() {
   try {
@@ -18,4 +19,4 @@ export async function apiFetch(url, opciones = {}) {
   return res
 }
 
-export { EVENTO_SESION_VENCIDA }
+export { EVENTO_SESION_VENCIDA, EVENTO_CARRERAS_ACTUALIZADAS }

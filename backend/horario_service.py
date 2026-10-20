@@ -2,7 +2,7 @@
 from datetime import date
 
 
-def validar_metadata(cur, carrera, anio_lectivo, semestre_lectivo, bloques, errores):
+def validar_metadata(cur, carrera, anio_lectivo, semestre_lectivo, bloques, errores, email):
     if not carrera:
         errores.append("No seleccionaste una carrera.")
         carrera = None
@@ -25,9 +25,12 @@ def validar_metadata(cur, carrera, anio_lectivo, semestre_lectivo, bloques, erro
 
     materias_validas = set()
     if carrera:
-        cur.execute("SELECT Nombre FROM Carreras WHERE Nombre = %s", (carrera,))
+        cur.execute(
+            "SELECT 1 FROM Pertenecen_A WHERE Carreras_Nombre = %s AND Email = %s",
+            (carrera, email),
+        )
         if not cur.fetchone():
-            errores.append(f"La carrera '{carrera}' no existe.")
+            errores.append("La carrera seleccionada no está asociada a tu cuenta.")
         else:
             cur.execute("SELECT Materias_Nombre FROM Tiene WHERE Carreras_Nombre = %s", (carrera,))
             materias_validas = {fila[0] for fila in cur.fetchall()}

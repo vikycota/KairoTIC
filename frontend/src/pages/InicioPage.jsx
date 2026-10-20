@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import ImportarPlanModal from './ImportarPlanModal'
-import { apiFetch } from '../api'
+import ScheduleImportPanel from './ScheduleImportPanel'
+import { apiFetch, EVENTO_CARRERAS_ACTUALIZADAS } from '../api'
 import '../pagesCSS/InicioPage.css'
 
 const DIAS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom']
@@ -33,6 +34,10 @@ function guardarStorage(clave, valor) {
     if (valor) localStorage.setItem(clave, JSON.stringify(valor))
     else localStorage.removeItem(clave)
   } catch { /* sin almacenamiento: los datos duran hasta recargar */ }
+}
+
+function clavePeriodoTaller(carrera, anio, semestre) {
+  return JSON.stringify([carrera, String(anio), String(semestre)])
 }
 
 function parsearCsv(texto) {
@@ -72,7 +77,7 @@ function normalizarDia(valor) {
 }
 
 function normalizarHora(valor) {
-  const m = /^(\d{1,2})(?::|\.|h)?(\d{2})?$/.exec(valor.trim())
+  const m = /^(\d{1,2})(?::|\.|h)?(\d{2})?(?::\d{2}(?:\.\d+)?)?$/.exec(valor.trim())
   if (!m) return null
   const h = Number(m[1]), min = Number(m[2] ?? 0)
   if (h > 23 || min > 59) return null
@@ -236,53 +241,300 @@ function VistaSemana({ bloques, tipo }) {
 }
 
 function CargadorBloques({ tipo, clave, titulo, descripcion, numero, etiqueta, onListo }) {
-  const [bloques, setBloques] = useState(() => leerStorage(clave)?.bloques ?? [])
-  const [nombreArchivo, setNombreArchivo] = useState(() => leerStorage(clave)?.archivo ?? '')
+  const guardadoInicial = leerStorage(clave) ?? {}
+  const [bloques, setBloques] = useState(() => guardadoInicial.bloques ?? [])
+  const [nombreArchivo, setNombreArchivo] = useState(() => guardadoInicial.archivo ?? '')
+  const [carreras, setCarreras] = useState([])
+  const [carrera, setCarrera] = useState(() => guardadoInicial.carrera ?? '')
+  const [anio, setAnio] = useState(() => String(guardadoInicial.anio_lectivo ?? new Date().getFullYear()))
+  const [semestre, setSemestre] = useState(() => String(
+    guardadoInicial.semestre ?? guardadoInicial.semestre_lectivo ?? (new Date().getMonth() >= 6 ? 2 : 1)
+  ))
   const [errores, setErrores] = useState([])
+  const [archivoSeleccionado, setArchivoSeleccionado] = useState(null)
+  const [vistaPrevia, setVistaPrevia] = useState(null)
+  const entradaArchivo = useRef(null)
 
-  async function alElegir(archivo) {
+  const actualizarCarreras = useCallback(async (carreraImportada = '') => {
+    if (tipo !== 'talleres') return
+    try {
+      const res = await apiFetch('/api/carreras', { cache: 'no-store' })
+      if (!res.ok) throw new Error('No se pudieron cargar las carreras.')
+      let disponibles = (await res.json()).carreras ?? []
+      if (carreraImportada && !disponibles.some((item) => item.nombre === carreraImportada)) {
+        disponibles = [...disponibles, { nombre: carreraImportada }].sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'))
+      }
+      setCarreras(disponibles)
+      if (carreraImportada) setCarrera(carreraImportada)
+    } catch {
+      setErrores(['No se pudieron cargar las carreras.'])
+    }
+  }, [tipo])
+
+  useEffect(() => {
+    if (tipo !== 'talleres') return undefined
+    const inicioCarga = window.setTimeout(() => actualizarCarreras(), 0)
+    const alActualizar = (event) => actualizarCarreras(event.detail?.carrera ?? '')
+    window.addEventListener(EVENTO_CARRERAS_ACTUALIZADAS, alActualizar)
+    return () => {
+      window.clearTimeout(inicioCarga)
+      window.removeEventListener(EVENTO_CARRERAS_ACTUALIZADAS, alActualizar)
+    }
+  }, [tipo, actualizarCarreras])
+
+  const carreraActiva = carrera || carreras[0]?.nombre || ''
+
+  function periodoGuardado(guardado, carreraDestino, anioDestino) {
+    if (guardado.por_periodo) {
+      return {
+        porPeriodo: { ...guardado.por_periodo },
+        archivos: { ...(guardado.archivos_por_periodo ?? {}) },
+      }
+    }
+    const porPeriodo = {}
+    const archivos = {}
+    Object.entries(guardado.por_semestre ?? {}).forEach(([semestreGuardado, items]) => {
+      const key = clavePeriodoTaller(guardado.carrera || carreraDestino, guardado.anio_lectivo || anioDestino, semestreGuardado)
+      porPeriodo[key] = items
+      if (guardado.archivos_por_semestre?.[semestreGuardado]) archivos[key] = guardado.archivos_por_semestre[semestreGuardado]
+    })
+    if (!Object.keys(porPeriodo).length && guardado.bloques?.length) {
+      const semestreGuardado = String(guardado.semestre ?? guardado.semestre_lectivo ?? semestre)
+      const key = clavePeriodoTaller(guardado.carrera || carreraDestino, guardado.anio_lectivo || anioDestino, semestreGuardado)
+      porPeriodo[key] = guardado.bloques
+      if (guardado.archivo) archivos[key] = guardado.archivo
+    }
+    return { porPeriodo, archivos }
+  }
+
+  function actualizarPeriodo(campo, valor) {
+    const siguienteCarrera = campo === 'carrera' ? valor : carreraActiva
+    const siguienteAnio = campo === 'anio' ? valor : anio
+    const siguienteSemestre = campo === 'semestre' ? valor : semestre
+    if (campo === 'carrera') setCarrera(valor)
+    if (campo === 'anio') setAnio(valor)
+    if (campo === 'semestre') setSemestre(valor)
     setErrores([])
+    setVistaPrevia(null)
+    if (tipo !== 'talleres') return
+    if (!siguienteCarrera || !siguienteAnio || !siguienteSemestre) {
+      setBloques([])
+      setNombreArchivo('')
+      return
+    }
+    const guardado = leerStorage(clave) ?? {}
+    const { porPeriodo, archivos } = periodoGuardado(guardado, siguienteCarrera, siguienteAnio)
+    const key = clavePeriodoTaller(siguienteCarrera, siguienteAnio, siguienteSemestre)
+    const seleccionados = porPeriodo[key] ?? []
+    const archivoSeleccionado = archivos[key] ?? ''
+    setBloques(seleccionados)
+    setNombreArchivo(archivoSeleccionado)
+    guardarStorage(clave, {
+      ...guardado,
+      carrera: siguienteCarrera,
+      anio_lectivo: siguienteAnio,
+      semestre: siguienteSemestre,
+      bloques: seleccionados,
+      archivo: archivoSeleccionado,
+      por_periodo: porPeriodo,
+      archivos_por_periodo: archivos,
+    })
+  }
+
+  function alElegir(archivo) {
+    setErrores([])
+    if (!archivo) return
     if (!/\.csv$/i.test(archivo.name)) {
+      setArchivoSeleccionado(null)
+      setVistaPrevia(null)
       return setErrores(['El archivo debe ser .csv (podés guardar tu Excel como CSV).'])
     }
-    const { bloques: nuevos, errores: fallos } = leerBloques(await archivo.text(), tipo)
+    setArchivoSeleccionado(archivo)
+    setVistaPrevia(null)
+  }
+
+  async function analizar(event) {
+    event.preventDefault()
+    setErrores([])
+    setVistaPrevia(null)
+    if (tipo === 'talleres' && (!carreraActiva || !anio || !semestre)) {
+      setErrores(['Seleccioná la carrera, el año lectivo y el semestre de estos talleres.'])
+      return
+    }
+    if (!archivoSeleccionado) {
+      setErrores(['Elegí un archivo .csv para analizar los talleres.'])
+      return
+    }
+    const { bloques: nuevos, errores: fallos } = leerBloques(await archivoSeleccionado.text(), tipo)
     setErrores(fallos)
-    if (!nuevos.length) return
-    setBloques(nuevos)
-    setNombreArchivo(archivo.name)
-    guardarStorage(clave, { bloques: nuevos, archivo: archivo.name })
+    if (nuevos.length) setVistaPrevia({ bloques: nuevos, archivo: archivoSeleccionado.name })
+  }
+
+  function guardarAnalisis() {
+    if (!vistaPrevia || !carreraActiva || !anio || !semestre) return
+    const guardado = leerStorage(clave) ?? {}
+    const { porPeriodo, archivos } = periodoGuardado(guardado, carreraActiva, anio)
+    const key = clavePeriodoTaller(carreraActiva, anio, semestre)
+    porPeriodo[key] = vistaPrevia.bloques
+    archivos[key] = vistaPrevia.archivo
+    const nuevoGuardado = {
+      ...guardado,
+      carrera: carreraActiva,
+      anio_lectivo: anio,
+      bloques: vistaPrevia.bloques,
+      archivo: vistaPrevia.archivo,
+      semestre,
+      por_periodo: porPeriodo,
+      archivos_por_periodo: archivos,
+    }
+    guardarStorage(clave, nuevoGuardado)
+    setBloques(vistaPrevia.bloques)
+    setNombreArchivo(vistaPrevia.archivo)
+    setArchivoSeleccionado(null)
+    if (entradaArchivo.current) entradaArchivo.current.value = ''
+    setVistaPrevia(null)
+    setErrores([])
   }
 
   function quitar() {
     setBloques([])
     setNombreArchivo('')
     setErrores([])
-    guardarStorage(clave, null)
+    if (tipo === 'talleres') {
+      const guardado = leerStorage(clave) ?? {}
+      const { porPeriodo, archivos } = periodoGuardado(guardado, carreraActiva, anio)
+      const key = clavePeriodoTaller(carreraActiva, anio, semestre)
+      delete porPeriodo[key]
+      delete archivos[key]
+      guardarStorage(clave, { ...guardado, carrera: carreraActiva, anio_lectivo: anio, semestre, bloques: [], archivo: '', por_periodo: porPeriodo, archivos_por_periodo: archivos })
+    } else {
+      guardarStorage(clave, null)
+    }
   }
 
   const listo = bloques.length > 0
   useEffect(() => { onListo(listo) }, [listo, onListo])
   const resumen = listo
-    ? `${nombreArchivo} · ${bloques.length} ${tipo === 'horarios' ? 'clases' : 'talleres'} en ${new Set(bloques.map((b) => b.dia)).size} días`
+    ? `${nombreArchivo} · ${tipo === 'talleres' ? `${carreraActiva} · ${anio} · Semestre ${semestre} · ${new Set(bloques.map((b) => b.nombre)).size} talleres · ` : ''}${bloques.length} bloques en ${new Set(bloques.map((b) => b.dia)).size} días`
     : ''
 
   return (
     <Tarjeta numero={numero} titulo={titulo} descripcion={descripcion} estado={listo ? 'listo' : 'pendiente'} resumen={resumen}>
-      <ZonaCarga
+      {tipo === 'talleres' && (
+        <>
+          <form className="schedule-import-form inicio-talleres-periodo" onSubmit={analizar}>
+            <label>
+              <span>Carrera</span>
+              <select value={carreraActiva} onChange={(event) => actualizarPeriodo('carrera', event.target.value)}>
+                <option value="">Seleccionar carrera</option>
+                {carreras.map((item) => <option key={item.nombre} value={item.nombre}>{item.nombre}</option>)}
+              </select>
+            </label>
+            <label>
+              <span>Año lectivo</span>
+              <input type="number" min="1900" max="9999" value={anio} onChange={(event) => actualizarPeriodo('anio', event.target.value)} />
+            </label>
+            <label>
+              <span>Semestre</span>
+              <select value={semestre} onChange={(event) => actualizarPeriodo('semestre', event.target.value)}>
+                <option value="1">1</option>
+                <option value="2">2</option>
+              </select>
+            </label>
+            <label className="schedule-file-field">
+              <span>Archivo</span>
+              <input ref={entradaArchivo} type="file" accept=".csv,text/csv" onChange={(event) => alElegir(event.target.files?.[0])} />
+            </label>
+            <button className="schedule-primary" type="submit">Analizar talleres</button>
+          </form>
+          {archivoSeleccionado && <p className="schedule-help">Archivo seleccionado: {archivoSeleccionado.name}</p>}
+          <p className="schedule-help">Subí un archivo .csv con una fila por bloque: taller, día, inicio, fin, salón y cupos.</p>
+          <Mensajes errores={errores} aviso={errores.length && listo ? 'Se mantuvieron los talleres guardados anteriormente.' : ''} />
+          {vistaPrevia && <section className="schedule-preview" aria-label="Vista previa de talleres">
+            <div className="schedule-preview-summary">
+              <strong>{vistaPrevia.archivo} · {carreraActiva} · {anio} · Semestre {semestre}</strong>
+              <span>{new Set(vistaPrevia.bloques.map((bloque) => bloque.nombre)).size} talleres · {vistaPrevia.bloques.length} bloques</span>
+            </div>
+            <div className="schedule-table-wrap"><table className="schedule-table"><thead><tr><th>Taller</th><th>Día</th><th>Horario</th><th>Salón</th><th>Cupos</th></tr></thead><tbody>
+              {vistaPrevia.bloques.map((bloque, indice) => <tr key={`${bloque.nombre}-${bloque.dia}-${bloque.inicio}-${indice}`}><td>{bloque.nombre}</td><td>{bloque.dia}</td><td>{bloque.inicio}–{bloque.fin}</td><td>{bloque.salon || '—'}</td><td>{bloque.extra || '—'}</td></tr>)}
+            </tbody></table></div>
+            <div className="schedule-preview-actions">
+              <button type="button" className="schedule-secondary" onClick={() => setVistaPrevia(null)}>Cancelar</button>
+              <button type="button" className="schedule-primary" onClick={guardarAnalisis}>Guardar talleres</button>
+            </div>
+          </section>}
+          {listo && <div className="schedule-current">
+            <h3>Talleres guardados · {carreraActiva} · {anio} · Semestre {semestre}</h3>
+            <div className="schedule-table-wrap"><table className="schedule-table"><thead><tr><th>Taller</th><th>Día</th><th>Horario</th><th>Salón</th><th>Cupos</th></tr></thead><tbody>
+              {bloques.map((bloque, indice) => <tr key={`${bloque.nombre}-${bloque.dia}-${bloque.inicio}-${indice}`}><td>{bloque.nombre}</td><td>{bloque.dia}</td><td>{bloque.inicio}–{bloque.fin}</td><td>{bloque.salon || '—'}</td><td>{bloque.extra || '—'}</td></tr>)}
+            </tbody></table></div>
+          </div>}
+        </>
+      )}
+      {tipo !== 'talleres' && <ZonaCarga
         id={`carga-${tipo}`}
         aceptar=".csv"
         etiqueta={listo ? 'Reemplazar archivo' : etiqueta}
         ayuda="Arrastrá un .csv acá o hacé clic para elegirlo"
         onArchivo={alElegir}
-      />
-      <Mensajes errores={errores} aviso={errores.length && listo ? 'Se mantuvo el archivo cargado anteriormente.' : ''} />
-      {listo && <VistaSemana bloques={bloques} tipo={tipo} />}
+      />}
+      {tipo !== 'talleres' && <Mensajes errores={errores} aviso={errores.length && listo ? 'Se mantuvo el archivo cargado anteriormente.' : ''} />}
+      {tipo !== 'talleres' && listo && <VistaSemana bloques={bloques} tipo={tipo} />}
       <footer className="inicio-acciones">
         <button type="button" className="inicio-enlace" onClick={() => descargar(PLANTILLAS[tipo])}>
           Descargar plantilla
         </button>
-        {listo && <button type="button" className="inicio-enlace inicio-enlace--peligro" onClick={quitar}>Quitar</button>}
+        {listo && <button type="button" className="inicio-enlace inicio-enlace--peligro" onClick={quitar}>{tipo === 'talleres' ? 'Quitar talleres de este semestre' : 'Quitar'}</button>}
       </footer>
+    </Tarjeta>
+  )
+}
+
+const DIAS_CALENDARIO = {
+  Lunes: 'Lun', Martes: 'Mar', Miércoles: 'Mié', Jueves: 'Jue',
+  Viernes: 'Vie', Sábado: 'Sáb', Domingo: 'Dom',
+}
+
+function CargadorHorarios({ clave, titulo, descripcion, numero, onListo }) {
+  const [bloques, setBloques] = useState(() => leerStorage(clave)?.bloques ?? [])
+  const [nombreArchivo, setNombreArchivo] = useState(() => leerStorage(clave)?.archivo ?? '')
+
+  const sincronizarCalendario = useCallback((resultado) => {
+    if (!resultado?.bloques?.length) return
+    const nuevos = resultado.bloques.map((bloque) => ({
+      nombre: bloque.materia,
+      dia: DIAS_CALENDARIO[bloque.dia] ?? bloque.dia,
+      inicio: String(bloque.hora_inicio ?? '').slice(0, 5),
+      fin: String(bloque.hora_fin ?? '').slice(0, 5),
+      salon: bloque.salon ?? '',
+      extra: bloque.docente ?? '',
+    }))
+    setBloques(nuevos)
+    setNombreArchivo(`${resultado.carrera} · ${resultado.anio_lectivo} · Semestre ${resultado.semestre_lectivo}`)
+    guardarStorage(clave, {
+      bloques: nuevos,
+      archivo: `${resultado.carrera} · ${resultado.anio_lectivo} · Semestre ${resultado.semestre_lectivo}`,
+      carrera: resultado.carrera,
+      anio_lectivo: resultado.anio_lectivo,
+      semestre_lectivo: resultado.semestre_lectivo,
+    })
+  }, [clave])
+
+  const listo = bloques.length > 0
+  useEffect(() => { onListo(listo) }, [listo, onListo])
+  const resumen = listo
+    ? `${nombreArchivo} · ${bloques.length} clases en ${new Set(bloques.map((b) => b.dia)).size} días`
+    : ''
+
+  return (
+    <Tarjeta numero={numero} titulo={titulo} descripcion={descripcion} estado={listo ? 'listo' : 'pendiente'} resumen={resumen}>
+      <div className="inicio-horarios-importador">
+        <ScheduleImportPanel
+          onImported={sincronizarCalendario}
+          onSchedulesLoaded={sincronizarCalendario}
+        />
+      </div>
+      {listo && <VistaSemana bloques={bloques} tipo="horarios" />}
     </Tarjeta>
   )
 }
@@ -294,7 +546,7 @@ function CargadorPlan({ onVerPlan, onListo }) {
   const [errores, setErrores] = useState([])
 
   function cargarPlanes() {
-    apiFetch('/api/carreras')
+    apiFetch('/api/carreras', { cache: 'no-store' })
       .then((res) => res.ok ? res.json() : Promise.reject())
       .then((data) => setPlanes((data.carreras ?? []).map((c) => c.nombre)))
       .catch(() => {})
@@ -305,9 +557,9 @@ function CargadorPlan({ onVerPlan, onListo }) {
   // PDF, CSV, XLSX y JSON pasan por el mismo modal de revisión y guardado.
   function alElegir(archivo) {
     setErrores([])
+    if (!archivo) return
     if (/\.(pdf|csv|xlsx|json)$/i.test(archivo.name)) {
       setArchivoModal(archivo)
-      setModalAbierto(true)
     } else {
       setErrores(['Formato no admitido. Usá PDF, CSV, XLSX o JSON.'])
     }
@@ -336,14 +588,24 @@ function CargadorPlan({ onVerPlan, onListo }) {
 
       <footer className="inicio-acciones">
         {listo && <button type="button" className="inicio-enlace" onClick={onVerPlan}>Ver plan →</button>}
+        <button
+          type="button"
+          className="inicio-btn"
+          disabled={!archivoModal}
+          onClick={() => setModalAbierto(true)}
+        >
+          Guardar plan
+        </button>
       </footer>
+
+      {archivoModal && <p className="inicio-resumen">Archivo seleccionado: {archivoModal.name}</p>}
 
       {modalAbierto && (
         <ImportarPlanModal
           abierto
           archivoInicial={archivoModal}
           onCerrar={() => setModalAbierto(false)}
-          onImportado={() => { setModalAbierto(false); cargarPlanes() }}
+          onImportado={() => { setModalAbierto(false); setArchivoModal(null); cargarPlanes() }}
         />
       )}
     </Tarjeta>
@@ -383,13 +645,11 @@ function InicioPage({ nombreUsuario, emailUsuario, onIr }) {
       <div className="inicio-contenido">
         <div className="inicio-grilla">
           <CargadorPlan onVerPlan={() => onIr?.('plan-estudio')} onListo={marcar.plan} />
-          <CargadorBloques
-            tipo="horarios"
+          <CargadorHorarios
             clave={`${CLAVE_HORARIOS}:${emailUsuario}`}
             numero={2}
             titulo="Horarios del semestre"
             descripcion="Días y horas de cada materia que se dicta."
-            etiqueta="Subir horarios"
             onListo={marcar.horarios}
           />
           <CargadorBloques
