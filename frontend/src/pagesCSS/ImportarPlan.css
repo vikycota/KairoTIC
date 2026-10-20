@@ -250,3 +250,8 @@
   .plan-header-buttons { flex-wrap: wrap; }
   .plan-select { max-width: 100%; }
 }
+
+.importar-archivo--activo span {
+  background: #f4f0ff;
+  border-color: #7c5cfc;
+}

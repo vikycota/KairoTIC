@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { apiFetch } from '../api'
 import '../pagesCSS/ImportarPlan.css'
 
 async function leerJson(res) {
@@ -9,21 +10,74 @@ async function leerJson(res) {
   }
 }
 
-function ImportarPlanModal({ abierto, onCerrar, onImportado }) {
-  const [archivo, setArchivo] = useState(null)
+const esArchivoPdf = (archivo) => Boolean(archivo) && /\.pdf$/i.test(archivo.name)
+
+/** Da al resultado del PDF la misma forma que la vista previa de /plan/preview. */
+function revisionDesdePdf(plan, nombreCarrera) {
+  if (!plan) return null
+  const materias = (plan.semestres ?? []).flatMap((s) =>
+    (s.materias ?? []).map((m) => ({
+      semestre: s.numero,
+      nombre: m.nombre ?? '',
+      creditos: Number(m.creditos) || 0,
+      categoria: m.categoria ?? null,
+      previas: [],
+    }))
+  )
+  return {
+    carrera: nombreCarrera.trim() || plan.carrera || '',
+    valido: materias.length > 0,
+    errores: materias.length ? [] : ['No se detectaron materias en el PDF.'],
+    avisos: materias.length ? ['El PDF no incluye las previas: quedan vacías. Podés completarlas luego con un CSV.'] : [],
+    materias,
+    resumen: {
+      materias: materias.length,
+      creditos_total: materias.reduce((a, m) => a + m.creditos, 0),
+      semestres: new Set(materias.map((m) => m.semestre)).size,
+      con_previas: 0,
+      total_previas: 0,
+      categorias: new Set(materias.map((m) => m.categoria).filter(Boolean)).size,
+      sin_semestre: 0,
+    },
+  }
+}
+
+function csvDesdeMaterias(materias) {
+  const celda = (t) => `"${String(t ?? '').replace(/"/g, '""')}"`
+  const filas = ['semestre;materia;creditos;categoria;previas']
+  for (const m of materias) filas.push([m.semestre, celda(m.nombre), m.creditos, celda(m.categoria), ''].join(';'))
+  return String.fromCharCode(0xFEFF) + filas.join(String.fromCharCode(13, 10))
+}
+
+function ImportarPlanModal({ abierto, archivoInicial = null, onCerrar, onImportado }) {
+  const [archivo, setArchivo] = useState(archivoInicial)
   const [carrera, setCarrera] = useState('')
-  const [revision, setRevision] = useState(null)   // respuesta de /plan/preview
+  const [revisionApi, setRevision] = useState(null)   // respuesta de /plan/preview (CSV, XLSX, JSON)
+  const [planPdf, setPlanPdf] = useState(null)         // respuesta de /study-plan/import (PDF)
+  const [arrastrando, setArrastrando] = useState(false)
   const [error, setError] = useState('')           // error de lectura o de red
-  const [revisando, setRevisando] = useState(false)
+  const [revisando, setRevisando] = useState(Boolean(archivoInicial))
   const [guardando, setGuardando] = useState(false)
 
   function limpiar() {
     setArchivo(null)
     setCarrera('')
     setRevision(null)
+    setPlanPdf(null)
     setError('')
     setRevisando(false)
     setGuardando(false)
+  }
+
+  const esPdf = esArchivoPdf(archivo)
+  const revision = esPdf ? revisionDesdePdf(planPdf, carrera) : revisionApi
+
+  function elegirArchivo(elegido) {
+    setArchivo(elegido)
+    setRevision(null)
+    setPlanPdf(null)
+    setError('')
+    setRevisando(Boolean(elegido))
   }
 
   function cerrar() {
@@ -33,19 +87,19 @@ function ImportarPlanModal({ abierto, onCerrar, onImportado }) {
 
   // Revisa el archivo (sin guardar nada) cada vez que cambia el archivo o el nombre de la carrera.
   useEffect(() => {
-    if (!abierto || !archivo) return
+    if (!abierto || !archivo || esArchivoPdf(archivo)) return
     let vigente = true
     const espera = setTimeout(async () => {
       const datos = new FormData()
       datos.append('archivo', archivo)
       if (carrera.trim()) datos.append('carrera', carrera.trim())
       try {
-        const res = await fetch('/api/plan/preview', { method: 'POST', body: datos })
+        const res = await apiFetch('/api/plan/preview', { method: 'POST', body: datos })
         const json = await leerJson(res)
         if (!vigente) return
         if (!res.ok) {
           setRevision(null)
-          setError(json.error || 'No se pudo leer el archivo.')
+          setError(res.status >= 502 ? 'El servidor no responde. Verificá que el backend esté encendido.' : json.error || 'No se pudo leer el archivo.')
         } else {
           setRevision(json)
           setError('')
@@ -62,6 +116,31 @@ function ImportarPlanModal({ abierto, onCerrar, onImportado }) {
     }
   }, [abierto, archivo, carrera])
 
+  // Un PDF se analiza una sola vez por archivo (puede tardar), sin repetirlo al cambiar el nombre.
+  useEffect(() => {
+    if (!abierto || !esArchivoPdf(archivo)) return
+    let vigente = true
+    ;(async () => {
+      const datos = new FormData()
+      datos.append('pdf', archivo)
+      try {
+        const res = await fetch('/api/study-plan/import', { method: 'POST', body: datos })
+        const json = await leerJson(res)
+        if (!vigente) return
+        if (!res.ok) {
+          setError(res.status >= 502 ? 'El servidor no responde. Verificá que el backend esté encendido.' : json.error || 'No se pudo leer el PDF.')
+        } else {
+          setPlanPdf(json)
+        }
+      } catch {
+        if (vigente) setError('No se pudo conectar con el servidor.')
+      } finally {
+        if (vigente) setRevisando(false)
+      }
+    })()
+    return () => { vigente = false }
+  }, [abierto, archivo])
+
   // Escape cierra el modal
   useEffect(() => {
     if (!abierto) return
@@ -74,10 +153,16 @@ function ImportarPlanModal({ abierto, onCerrar, onImportado }) {
     setGuardando(true)
     setError('')
     const datos = new FormData()
-    datos.append('archivo', archivo)
-    datos.append('carrera', revision.carrera)
+    if (esPdf) {
+      // El PDF se guarda igual que un CSV: así el plan queda en la base y se ve en el selector de carreras.
+      datos.append('archivo', new Blob([csvDesdeMaterias(revision.materias)], { type: 'text/csv' }), 'plan.csv')
+      datos.append('carrera', revision.carrera || archivo.name.replace(/\.pdf$/i, ''))
+    } else {
+      datos.append('archivo', archivo)
+      datos.append('carrera', revision.carrera)
+    }
     try {
-      const res = await fetch('/api/plan/importar', { method: 'POST', body: datos })
+      const res = await apiFetch('/api/plan/importar', { method: 'POST', body: datos })
       const json = await leerJson(res)
       if (res.ok) {
         const nombre = json.carrera
@@ -85,7 +170,8 @@ function ImportarPlanModal({ abierto, onCerrar, onImportado }) {
         onImportado(nombre)
         return
       }
-      if (res.status === 422) setRevision(json)
+      if (res.status === 422 && !esPdf) setRevision(json)
+      else if (res.status === 422) setError(json.errores?.[0] || 'El plan detectado no es válido.')
       else setError(json.error || 'No se pudo guardar el plan.')
     } catch {
       setError('No se pudo conectar con el servidor.')
@@ -109,28 +195,27 @@ function ImportarPlanModal({ abierto, onCerrar, onImportado }) {
 
         <div className="importar-cuerpo">
           <p className="importar-ayuda">
-            Subí un archivo <strong>.csv</strong>, <strong>.xlsx</strong> o <strong>.json</strong> con una fila por
-            materia: semestre, materia, créditos, categoría y previas (varias previas se separan con “;”).
-            Guardar reemplaza el plan anterior de esa carrera.
+            Subí tu plan en <strong>PDF</strong>, <strong>.csv</strong>, <strong>.xlsx</strong> o <strong>.json</strong>.
+            Con CSV, XLSX o JSON, cada fila es una materia: semestre, materia, créditos, categoría y previas
+            (varias previas se separan con “;”). Guardar reemplaza el plan anterior de esa carrera.
           </p>
-          <p className="importar-plantillas">
-            Plantillas: <a href="/api/plan/plantilla.csv">CSV para Excel</a> · <a href="/api/plan/plantilla.json">JSON</a>
-          </p>
-
           <div className="importar-campos">
-            <label className="importar-archivo">
+            <label
+              className={`importar-archivo ${arrastrando ? 'importar-archivo--activo' : ''}`}
+              onDragOver={(e) => { e.preventDefault(); setArrastrando(true) }}
+              onDragLeave={() => setArrastrando(false)}
+              onDrop={(e) => {
+                e.preventDefault()
+                setArrastrando(false)
+                elegirArchivo(e.dataTransfer.files[0] ?? null)
+              }}
+            >
               <input
                 type="file"
-                accept=".csv,.xlsx,.json"
-                onChange={(e) => {
-                  const elegido = e.target.files[0] ?? null
-                  setArchivo(elegido)
-                  setRevision(null)
-                  setError('')
-                  setRevisando(Boolean(elegido))
-                }}
+                accept=".pdf,.csv,.xlsx,.json"
+                onChange={(e) => elegirArchivo(e.target.files[0] ?? null)}
               />
-              <span>{archivo ? archivo.name : 'Elegir archivo'}</span>
+              <span>{archivo ? archivo.name : 'Elegir o arrastrar archivo'}</span>
             </label>
 
             <label className="importar-carrera">
@@ -141,14 +226,14 @@ function ImportarPlanModal({ abierto, onCerrar, onImportado }) {
                 maxLength={100}
                 onChange={(e) => {
                   setCarrera(e.target.value)
-                  if (archivo) setRevisando(true)
+                  if (archivo && !esPdf) setRevisando(true)
                 }}
                 placeholder={revision?.carrera || 'Si el archivo no lo trae'}
               />
             </label>
           </div>
 
-          {revisando && <p className="importar-estado">Revisando archivo…</p>}
+          {revisando && <p className="importar-estado">{esPdf ? 'Analizando PDF… puede tardar unos segundos.' : 'Revisando archivo…'}</p>}
           {error && <p className="importar-caja importar-caja-error" role="alert">{error}</p>}
 
           {revision && !revisando && (
