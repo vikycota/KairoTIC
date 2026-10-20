@@ -17,6 +17,7 @@ import { apiFetch, EVENTO_CARRERAS_ACTUALIZADAS } from '../api'
 
 const DIAS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom']
 const DIAS_COMPLETOS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
+const DIAS_CALENDARIO = { Lunes: 'Lun', Martes: 'Mar', Miércoles: 'Mié', Jueves: 'Jue', Viernes: 'Vie', Sábado: 'Sáb', Domingo: 'Dom' }
 const DIAS_COMPLETOS_TALLER = { Lun: 'Lunes', Mar: 'Martes', Mié: 'Miércoles', Jue: 'Jueves', Vie: 'Viernes', Sáb: 'Sábado', Dom: 'Domingo' }
 const ALTURA_HORA = 44
 const MAX_ALTERNATIVAS_VISIBLES = 10
@@ -69,12 +70,61 @@ function leerBloquesManuales(emailUsuario) {
   }
 }
 
+function leerPlanificacionesGuardadas(emailUsuario) {
+  try {
+    return JSON.parse(localStorage.getItem(`kairo-planificaciones:${emailUsuario}`) || 'null') ?? { por_periodo: {} }
+  } catch {
+    return { por_periodo: {} }
+  }
+}
+
+function leerPlanificacionPeriodo(emailUsuario, carrera, anio, semestre) {
+  const planes = leerPlanificacionesGuardadas(emailUsuario)
+  const periodo = clavePeriodo(carrera, anio, semestre)
+  return planes.por_periodo?.[periodo] ?? null
+}
+
+function leerPlanificacionActiva(emailUsuario) {
+  const planes = leerPlanificacionesGuardadas(emailUsuario)
+  return planes.por_periodo?.[planes.activo] ?? null
+}
+
+function prepararPlanGuardado(guardado) {
+  if (!guardado) return { materias: {}, talleres: {}, planificacion: null }
+  const bloques = guardado.bloques_planificacion ?? (guardado.bloques ?? []).map((bloque, indice) => ({
+    id: `guardado-${indice}`,
+    materia: bloque.nombre,
+    grupo: bloque.grupo ?? '',
+    dia: DIAS_COMPLETOS_TALLER[bloque.dia] ?? bloque.dia,
+    hora_inicio: bloque.inicio,
+    hora_fin: bloque.fin,
+    tipo: bloque.tipo === 'taller' ? 'Taller' : 'Clase',
+  }))
+  const materias = guardado.materias_seleccionadas ?? Object.fromEntries(
+    bloques
+      .filter((bloque) => bloque.tipo !== 'Taller' && bloque.tipo !== 'Manual')
+      .map((bloque) => [bloque.materia, { seleccionada: true, grupo: bloque.grupo }])
+  )
+  const talleres = guardado.talleres_seleccionados ?? [...new Set(
+    bloques.filter((bloque) => bloque.tipo === 'Taller').map((bloque) => bloque.materia)
+  )]
+  return {
+    materias,
+    talleres: Object.fromEntries(talleres.map((nombre) => [nombre, true])),
+    planificacion: bloques.length ? { bloques, ...detectarConflictosHorario(bloques) } : null,
+  }
+}
+
 function clavePeriodo(carrera, anio, semestre) {
   return JSON.stringify([carrera, String(anio), String(semestre)])
 }
 
 function horaValida(hora) {
   return /^([01]\d|2[0-3]):[0-5]\d$/.test(hora)
+}
+
+function nuevoIdBloqueManual() {
+  return `manual-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
 }
 
 function etiquetaBloque(bloque) {
@@ -91,25 +141,32 @@ function expandirBloquesManuales(bloques) {
   ))
 }
 
-function PlanPage({ emailUsuario }) {
+function PlanPage({ emailUsuario, onIr }) {
+  const planActivoInicial = leerPlanificacionActiva(emailUsuario)
+  const periodoInicial = planActivoInicial ?? {}
+  const estadoPlanInicial = prepararPlanGuardado(planActivoInicial)
   const [mostrarImportacionHorarios, setMostrarImportacionHorarios] = useState(false)
   const [mostrarMaterias, setMostrarMaterias] = useState(false)
   const [mostrarTalleres, setMostrarTalleres] = useState(false)
   const [mostrarAgregarBloque, setMostrarAgregarBloque] = useState(false)
+  const [opcionesSeleccionAutomatica, setOpcionesSeleccionAutomatica] = useState([])
+  const [mensajeSeleccionAutomatica, setMensajeSeleccionAutomatica] = useState('')
   const [errorBloqueManual, setErrorBloqueManual] = useState('')
   const [bloqueManualNuevo, setBloqueManualNuevo] = useState({ nombre: '', dia: 'Lunes', hora_inicio: '08:00', hora_fin: '09:00', repeticion: 'semanal', fecha_inicio: '' })
-  const [planificacion, setPlanificacion] = useState(null)
+  const [planificacion, setPlanificacion] = useState(estadoPlanInicial.planificacion)
   const [planificacionPendiente, setPlanificacionPendiente] = useState(false)
   const [alternativas, setAlternativas] = useState(null)
   const [alternativasTruncadas, setAlternativasTruncadas] = useState(false)
   const [alternativaVista, setAlternativaVista] = useState(null)
   const [mensajePlanificacion, setMensajePlanificacion] = useState('')
+  const [mensajeGuardar, setMensajeGuardar] = useState('')
   const [carreras, setCarreras] = useState([])
   const [revisionCarreras, setRevisionCarreras] = useState(0)
   const [carreraRecienImportada, setCarreraRecienImportada] = useState('')
-  const [carrera, setCarrera] = useState(() => leerPeriodoGuardado(emailUsuario, 'carrera', ''))
-  const [anioLectivo, setAnioLectivo] = useState(() => String(leerPeriodoGuardado(emailUsuario, 'anio_lectivo', new Date().getFullYear())))
+  const [carrera, setCarrera] = useState(() => periodoInicial.carrera ?? leerPeriodoGuardado(emailUsuario, 'carrera', ''))
+  const [anioLectivo, setAnioLectivo] = useState(() => String(periodoInicial.anio_lectivo ?? leerPeriodoGuardado(emailUsuario, 'anio_lectivo', new Date().getFullYear())))
   const [semestreLectivo, setSemestreLectivo] = useState(() => {
+    if (periodoInicial.semestre_lectivo != null) return String(periodoInicial.semestre_lectivo)
     const guardado = leerPeriodoGuardado(emailUsuario, 'semestre_lectivo', null)
     if (guardado != null) return String(guardado)
     const talleres = leerTalleresGuardados(emailUsuario)
@@ -118,8 +175,8 @@ function PlanPage({ emailUsuario }) {
   const [planMaterias, setPlanMaterias] = useState([])
   const [bloquesOferta, setBloquesOferta] = useState([])
   const [respuestaAcademica, setRespuestaAcademica] = useState(null)
-  const [materiasSeleccionadas, setMateriasSeleccionadas] = useState({})
-  const [talleresSeleccionados, setTalleresSeleccionados] = useState({})
+  const [materiasSeleccionadas, setMateriasSeleccionadas] = useState(estadoPlanInicial.materias)
+  const [talleresSeleccionados, setTalleresSeleccionados] = useState(estadoPlanInicial.talleres)
   const [talleresGuardados] = useState(() => leerTalleresGuardados(emailUsuario))
   const [bloquesManualesGuardados, setBloquesManualesGuardados] = useState(() => leerBloquesManuales(emailUsuario))
   const [cargandoCarreras, setCargandoCarreras] = useState(true)
@@ -298,6 +355,18 @@ function PlanPage({ emailUsuario }) {
     () => new Set((planificacion?.conflictos ?? []).flatMap(({ bloqueA, bloqueB }) => [bloqueA.id, bloqueB.id])),
     [planificacion]
   )
+  const puedeGuardarPlan = Boolean(
+    planificacion?.compatible
+    && !planificacionPendiente
+    && carrera
+    && planificacion.bloques.some((bloque) => bloque.tipo !== 'Taller' && bloque.tipo !== 'Manual')
+    && planificacion.bloques
+      .filter((bloque) => bloque.tipo !== 'Taller' && bloque.tipo !== 'Manual')
+      .every((bloque) => {
+        const estado = materiasSeleccionadas[bloque.materia]
+        return estado?.seleccionada && String(estado.grupo) === String(bloque.grupo)
+      })
+  )
   const errorDisponibilidad = [errorCarreras, errorPlan, errorHorarios, errorEstado].filter(Boolean).join(' ')
 
   useEffect(() => {
@@ -337,6 +406,7 @@ function PlanPage({ emailUsuario }) {
   }, [mostrarAgregarBloque])
 
   function invalidarPlanificacion() {
+    setMensajeGuardar('')
     if (planificacion) {
       setPlanificacion(null)
       setPlanificacionPendiente(true)
@@ -344,7 +414,168 @@ function PlanPage({ emailUsuario }) {
     setAlternativas(null)
     setAlternativasTruncadas(false)
     setAlternativaVista(null)
+    setOpcionesSeleccionAutomatica([])
+    setMensajeSeleccionAutomatica('')
     setMensajePlanificacion('')
+  }
+
+  function restaurarPlanPeriodo(carreraDestino, anioDestino, semestreDestino) {
+    const estado = prepararPlanGuardado(
+      leerPlanificacionPeriodo(emailUsuario, carreraDestino, anioDestino, semestreDestino)
+    )
+    setMateriasSeleccionadas(estado.materias)
+    setTalleresSeleccionados(estado.talleres)
+    setPlanificacion(estado.planificacion)
+    setPlanificacionPendiente(false)
+    setMensajePlanificacion('')
+  }
+
+  function guardarYEnviarACalendario() {
+    if (!puedeGuardarPlan) return
+    const periodo = clavePeriodo(carrera, anioLectivo, semestreLectivo)
+    const bloques = [
+      ...planificacion.bloques.filter((bloque) => bloque.tipo !== 'Manual'),
+      ...bloquesManuales,
+    ].map((bloque) => ({
+        id: bloque.id,
+        nombre: bloque.materia,
+        dia: DIAS_CALENDARIO[bloque.dia] ?? bloque.dia,
+        inicio: bloque.hora_inicio,
+        fin: bloque.hora_fin,
+        tipo: bloque.tipo === 'Taller' ? 'taller' : bloque.tipo === 'Manual' ? 'bloque' : 'clase',
+        grupo: bloque.grupo,
+        repeticion: bloque.repeticion,
+        fecha_inicio: bloque.fecha_inicio,
+      }))
+    try {
+      const clave = `kairo-planificaciones:${emailUsuario}`
+      const guardado = JSON.parse(localStorage.getItem(clave) || 'null') ?? { por_periodo: {} }
+      const siguiente = {
+        ...guardado,
+        activo: periodo,
+        por_periodo: {
+          ...(guardado.por_periodo ?? {}),
+          [periodo]: {
+            carrera,
+            anio_lectivo: String(anioLectivo),
+            semestre_lectivo: String(semestreLectivo),
+            bloques,
+            bloques_planificacion: planificacion.bloques,
+            materias_seleccionadas: Object.fromEntries(
+              Object.entries(materiasSeleccionadas)
+                .filter(([, estado]) => estado.seleccionada)
+                .map(([nombre, estado]) => [nombre, { seleccionada: true, grupo: estado.grupo }])
+            ),
+            talleres_seleccionados: Object.entries(talleresSeleccionados)
+              .filter(([, seleccionado]) => seleccionado)
+              .map(([nombre]) => nombre),
+          },
+        },
+      }
+      localStorage.setItem(clave, JSON.stringify(siguiente))
+      setMensajeGuardar('Semestre guardado. Abriendo Calendario…')
+      onIr?.('calendario')
+    } catch {
+      setMensajeGuardar('No se pudo guardar el semestre en este navegador.')
+    }
+  }
+
+  function generarSeleccionAutomatica() {
+    setMensajeSeleccionAutomatica('')
+    const seleccionadas = Object.entries(materiasSeleccionadas)
+      .filter(([, estado]) => estado.seleccionada)
+    const gruposFijos = Object.fromEntries(seleccionadas.filter(([, estado]) => estado.grupo).map(([nombre, estado]) => [nombre, estado.grupo]))
+    const pendientesObligatorias = new Set(seleccionadas.filter(([, estado]) => !estado.grupo).map(([nombre]) => nombre))
+    const candidatasPorNombre = new Map(materiasCandidatas.map((materia) => [materia.id, materia]))
+    if ([...pendientesObligatorias].some((nombre) => !candidatasPorNombre.has(nombre))) {
+      setOpcionesSeleccionAutomatica([])
+      setMensajeSeleccionAutomatica('Hay materias seleccionadas sin grupo que no tienen oferta habilitada en este período.')
+      return
+    }
+
+    const bloquesFijos = [
+      ...obtenerBloquesSeleccionados(materiasSeleccionadas, horariosPorMateria),
+      ...bloquesTalleresSeleccionados,
+      ...expandirBloquesManuales(bloquesManuales),
+    ]
+    if (!detectarConflictosHorario(bloquesFijos).compatible) {
+      setOpcionesSeleccionAutomatica([])
+      setMensajeSeleccionAutomatica('Los grupos, talleres o bloques actuales ya tienen conflictos. Ajustalos y recalculá.')
+      return
+    }
+
+    const materiasPorAgregar = materiasCandidatas.filter(({ id }) => !Object.hasOwn(gruposFijos, id))
+    if (!materiasPorAgregar.length) {
+      setOpcionesSeleccionAutomatica([])
+      setMensajeSeleccionAutomatica('Ya están seleccionadas todas las materias habilitadas con horarios disponibles.')
+      return
+    }
+
+    let mejorCantidad = -1
+    let nodos = 0
+    const limiteNodos = 12000
+    let mejores = []
+    const gruposIniciales = { ...gruposFijos }
+
+    function buscar(indice, grupos, bloques, cantidadAgregada) {
+      nodos += 1
+      if (nodos > limiteNodos || cantidadAgregada + materiasPorAgregar.length - indice < mejorCantidad) return
+      if (indice === materiasPorAgregar.length) {
+        if (pendientesObligatorias.size > 0 && [...pendientesObligatorias].some((nombre) => !grupos[nombre])) return
+        if (cantidadAgregada === 0) return
+        if (cantidadAgregada < mejorCantidad) return
+        if (cantidadAgregada > mejorCantidad) {
+          mejorCantidad = cantidadAgregada
+          mejores = []
+        }
+        mejores.push({ grupos: { ...gruposIniciales, ...grupos }, bloques: [...bloques] })
+        if (mejores.length >= 30) mejores = ordenarCombinacionesHorario(mejores).slice(0, 3)
+        return
+      }
+
+      const materia = materiasPorAgregar[indice]
+      const gruposMateria = Object.keys(materia.grupos)
+        .sort((a, b) => a.localeCompare(b, 'es', { numeric: true, sensitivity: 'base' }))
+      for (const grupo of gruposMateria) {
+        const nuevosBloques = (horariosPorMateria[materia.id].grupos[grupo] ?? [])
+          .map((bloque) => ({ ...bloque, materia: materia.id, grupo }))
+        const bloquesParciales = [...bloques, ...nuevosBloques]
+        if (detectarConflictosHorario(bloquesParciales).compatible) {
+          buscar(indice + 1, { ...grupos, [materia.id]: grupo }, bloquesParciales, cantidadAgregada + 1)
+        }
+      }
+      if (!pendientesObligatorias.has(materia.id)) buscar(indice + 1, grupos, bloques, cantidadAgregada)
+    }
+
+    buscar(0, {}, bloquesFijos, 0)
+    setOpcionesSeleccionAutomatica(ordenarCombinacionesHorario(mejores).slice(0, 3))
+    if (mejores.length === 0) {
+      setMensajeSeleccionAutomatica('No encontré una combinación compatible con los bloques y materias seleccionados.')
+    } else if (nodos > limiteNodos) {
+      setMensajeSeleccionAutomatica('Mostrando las mejores opciones compatibles encontradas. Podés recalcular para buscar otras combinaciones.')
+    }
+  }
+
+  function aceptarSeleccionAutomatica(opcion) {
+    const siguientes = { ...materiasSeleccionadas }
+    Object.entries(opcion.grupos).forEach(([materia, grupo]) => {
+      siguientes[materia] = { seleccionada: true, grupo }
+    })
+    setMateriasSeleccionadas(siguientes)
+    const resultado = detectarConflictosHorario(bloquesConIdentificadores(opcion.bloques))
+    setPlanificacion({ bloques: bloquesConIdentificadores(opcion.bloques), ...resultado })
+    setPlanificacionPendiente(false)
+    setAlternativas(null)
+    setAlternativasTruncadas(false)
+    setMensajePlanificacion('Selección automática aplicada.')
+    setOpcionesSeleccionAutomatica([])
+    setMensajeSeleccionAutomatica('')
+  }
+
+  function bloquesTalleresPara(seleccion) {
+    return talleresDisponibles
+      .filter(({ nombre }) => seleccion[nombre])
+      .flatMap(({ bloques }) => bloques)
   }
 
   function cambiarCarrera(valor) {
@@ -352,8 +583,7 @@ function PlanPage({ emailUsuario }) {
     setCarrera(valor)
     setPlanMaterias([])
     setBloquesOferta([])
-    setMateriasSeleccionadas({})
-    setTalleresSeleccionados({})
+    restaurarPlanPeriodo(valor, anioLectivo, semestreLectivo)
     setErrorPlan('')
     setErrorHorarios('')
     setCargandoPlan(Boolean(valor))
@@ -362,36 +592,40 @@ function PlanPage({ emailUsuario }) {
 
   function cambiarPeriodo(campo, valor) {
     invalidarPlanificacion()
+    const anioDestino = campo === 'anio' ? valor : anioLectivo
+    const semestreDestino = campo === 'semestre' ? valor : semestreLectivo
     if (campo === 'anio') setAnioLectivo(valor)
     else setSemestreLectivo(valor)
-    setTalleresSeleccionados({})
     setBloquesOferta([])
-    setMateriasSeleccionadas({})
+    restaurarPlanPeriodo(carrera, anioDestino, semestreDestino)
     setErrorHorarios('')
     setCargandoHorarios(Boolean(carrera && valor))
   }
 
   function seleccionarMateria(nombre, seleccionada) {
     invalidarPlanificacion()
-    setMateriasSeleccionadas((actuales) => {
-      const siguientes = { ...actuales }
-      if (seleccionada) siguientes[nombre] = { seleccionada: true, grupo: '' }
-      else delete siguientes[nombre]
-      return siguientes
-    })
+    const siguientes = { ...materiasSeleccionadas }
+    if (seleccionada) siguientes[nombre] = { seleccionada: true, grupo: '' }
+    else delete siguientes[nombre]
+    setMateriasSeleccionadas(siguientes)
+    actualizarPlanificacion(siguientes, bloquesTalleresSeleccionados, bloquesManuales)
   }
 
   function seleccionarGrupo(nombre, grupo) {
     invalidarPlanificacion()
-    setMateriasSeleccionadas((actuales) => ({
-      ...actuales,
+    const siguientes = {
+      ...materiasSeleccionadas,
       [nombre]: { seleccionada: true, grupo },
-    }))
+    }
+    setMateriasSeleccionadas(siguientes)
+    actualizarPlanificacion(siguientes, bloquesTalleresSeleccionados, bloquesManuales)
   }
 
   function seleccionarTaller(nombre, seleccionado) {
     invalidarPlanificacion()
-    setTalleresSeleccionados((actuales) => ({ ...actuales, [nombre]: seleccionado }))
+    const siguientes = { ...talleresSeleccionados, [nombre]: seleccionado }
+    setTalleresSeleccionados(siguientes)
+    actualizarPlanificacion(materiasSeleccionadas, bloquesTalleresPara(siguientes), bloquesManuales)
   }
 
   function abrirAgregarBloque() {
@@ -413,7 +647,7 @@ function PlanPage({ emailUsuario }) {
 
     invalidarPlanificacion()
     const bloque = {
-      id: `manual-${Date.now()}`,
+      id: nuevoIdBloqueManual(),
       materia: nombre,
       grupo: 'Manual',
       dia: bloqueManualNuevo.dia,
@@ -434,7 +668,7 @@ function PlanPage({ emailUsuario }) {
     setBloquesManualesGuardados(siguientes)
     localStorage.setItem(`kairo-bloques-manuales:${emailUsuario}`, JSON.stringify(siguientes))
     setMostrarAgregarBloque(false)
-    setMensajePlanificacion('Bloque agregado al horario.')
+    actualizarPlanificacion(materiasSeleccionadas, bloquesTalleresSeleccionados, siguientes.por_periodo[key])
   }
 
   function quitarBloqueManual(id) {
@@ -449,6 +683,7 @@ function PlanPage({ emailUsuario }) {
     }
     setBloquesManualesGuardados(siguientes)
     localStorage.setItem(`kairo-bloques-manuales:${emailUsuario}`, JSON.stringify(siguientes))
+    actualizarPlanificacion(materiasSeleccionadas, bloquesTalleresSeleccionados, siguientes.por_periodo[key])
   }
 
   function alImportarHorarios(resultado) {
@@ -468,12 +703,17 @@ function PlanPage({ emailUsuario }) {
     setRevisionHorarios((revision) => revision + 1)
   }
 
-  function planificarHorario() {
-    const seleccionadas = Object.entries(materiasSeleccionadas)
+  function actualizarPlanificacion(seleccion, bloquesTalleres, bloquesManualesPeriodo) {
+    const seleccionadas = Object.entries(seleccion)
       .filter(([, estado]) => estado.seleccionada)
 
-    if (seleccionadas.length === 0 && bloquesTalleresSeleccionados.length === 0 && bloquesManuales.length === 0) {
-      setMensajePlanificacion('Seleccioná una materia, un taller o agregá un bloque manual para planificar.')
+    if (seleccionadas.length === 0 && bloquesTalleres.length === 0 && bloquesManualesPeriodo.length === 0) {
+      setPlanificacion(null)
+      setPlanificacionPendiente(false)
+      setAlternativas(null)
+      setAlternativasTruncadas(false)
+      setAlternativaVista(null)
+      setMensajePlanificacion('')
       return
     }
 
@@ -483,20 +723,24 @@ function PlanPage({ emailUsuario }) {
 
     if (faltanGrupos) {
       const resultado = generarCombinacionesHorario(
-        materiasSeleccionadas,
+        seleccion,
         horariosPorMateria,
         undefined,
-        [...bloquesTalleresSeleccionados, ...expandirBloquesManuales(bloquesManuales)],
+        [...bloquesTalleres, ...expandirBloquesManuales(bloquesManualesPeriodo)],
       )
-      setPlanificacion(null)
       setPlanificacionPendiente(false)
       if (resultado.combinaciones.length === 0) {
+        setPlanificacion(null)
         setAlternativas([])
         setMensajePlanificacion('No existe una combinación sin superposiciones para las materias y talleres seleccionados.')
         return
       }
-      setAlternativas(ordenarCombinacionesHorario(resultado.combinaciones))
+      const ordenadas = ordenarCombinacionesHorario(resultado.combinaciones)
+      setAlternativas(ordenadas)
       setAlternativasTruncadas(resultado.truncado)
+      setAlternativaVista(0)
+      const bloquesSugeridos = bloquesConIdentificadores(ordenadas[0].bloques)
+      setPlanificacion({ bloques: bloquesSugeridos, ...detectarConflictosHorario(bloquesSugeridos) })
       setMensajePlanificacion('')
       return
     }
@@ -507,14 +751,17 @@ function PlanPage({ emailUsuario }) {
       !(horariosPorMateria[materia]?.grupos?.[estado.grupo]?.length)
     ))
     if (faltaOferta) {
+      setPlanificacion(null)
+      setPlanificacionPendiente(false)
+      setAlternativas(null)
       setMensajePlanificacion('No se encontraron bloques para uno o más grupos seleccionados. Revisá la oferta.')
       return
     }
 
     const bloques = [
-      ...obtenerBloquesSeleccionados(materiasSeleccionadas, horariosPorMateria),
-      ...bloquesTalleresSeleccionados,
-      ...expandirBloquesManuales(bloquesManuales),
+      ...obtenerBloquesSeleccionados(seleccion, horariosPorMateria),
+      ...bloquesTalleres,
+      ...expandirBloquesManuales(bloquesManualesPeriodo),
     ]
       .map((bloque, indice) => ({ ...bloque, id: bloque.id ?? `${bloque.tipo ?? 'Clase'}-${bloque.materia}-${bloque.grupo ?? ''}-${indice}` }))
     const resultado = detectarConflictosHorario(bloques)
@@ -598,11 +845,12 @@ function PlanPage({ emailUsuario }) {
             </button>
 
             <button
-              className="planificar-horario-button"
+              className="seleccion-automatica-button"
               type="button"
-              onClick={planificarHorario}
+              onClick={generarSeleccionAutomatica}
+              disabled={cargandoCarreras || cargandoPlan || cargandoHorarios || cargandoEstado}
             >
-              Planificar horario
+              {opcionesSeleccionAutomatica.length ? 'Recalcular opciones' : 'Selección automática'}
             </button>
 
             <button
@@ -683,6 +931,40 @@ function PlanPage({ emailUsuario }) {
             <p>Todavía no agregaste bloques manuales.</p>
           )}
         </section>
+
+        {(opcionesSeleccionAutomatica.length > 0 || mensajeSeleccionAutomatica) && (
+          <section className="planificacion-alternativas seleccion-automatica-opciones" aria-labelledby="seleccion-automatica-titulo">
+            <div className="seleccion-automatica-encabezado">
+              <div>
+                <h2 id="seleccion-automatica-titulo">Opciones de selección automática</h2>
+                <p>Elegí una opción para aplicar sus materias y grupos. Se muestran hasta tres combinaciones compatibles.</p>
+              </div>
+              <button type="button" onClick={generarSeleccionAutomatica}>Recalcular</button>
+            </div>
+            {mensajeSeleccionAutomatica && <p className="seleccion-automatica-mensaje" role="status">{mensajeSeleccionAutomatica}</p>}
+            {opcionesSeleccionAutomatica.length > 0 && (
+              <ol>
+                {opcionesSeleccionAutomatica.map((opcion, indice) => (
+                  <li className={indice === 0 ? 'planificacion-alternativa-recomendada' : ''} key={JSON.stringify(opcion.grupos)}>
+                    <h3>Opción {indice + 1}</h3>
+                    {indice === 0 && <span className="planificacion-recomendada">Más materias compatibles</span>}
+                    <ul>
+                      {Object.entries(opcion.grupos).map(([materia, grupo]) => {
+                        const horarios = opcion.bloques
+                          .filter((bloque) => bloque.materia === materia && String(bloque.grupo) === String(grupo))
+                          .map((bloque) => `${bloque.dia} ${bloque.hora_inicio}–${bloque.hora_fin}`)
+                        return <li key={materia}><strong>{materia} · Grupo {grupo}</strong>{horarios.length > 0 && <span className="seleccion-automatica-horarios">{horarios.join(' · ')}</span>}</li>
+                      })}
+                    </ul>
+                    <button className="seleccion-automatica-aplicar" type="button" onClick={() => aceptarSeleccionAutomatica(opcion)}>
+                      Aceptar opción
+                    </button>
+                  </li>
+                ))}
+              </ol>
+            )}
+          </section>
+        )}
 
         {alternativas?.length > 0 && (
           <section className="planificacion-alternativas" aria-labelledby="planificacion-alternativas-titulo">
@@ -844,6 +1126,15 @@ function PlanPage({ emailUsuario }) {
           </div>
 
         </div>
+
+        <footer className="plan-guardar-footer">
+          <div aria-live="polite">
+            {mensajeGuardar && <p role="status">{mensajeGuardar}</p>}
+          </div>
+          <button type="button" onClick={guardarYEnviarACalendario} disabled={!puedeGuardarPlan}>
+            Guardar y mandar a Calendario
+          </button>
+        </footer>
 
       </section>
 
