@@ -1,9 +1,10 @@
-.ingresar-horario-button, .planificar-horario-button, .agregar-bloque-button {
+.ingresar-horario-button, .seleccionar-materias-button, .planificar-horario-button, .agregar-bloque-button {
   display: flex;
   justify-content: flex-end;
 }
 
 .ingresar-horario-button,
+.seleccionar-materias-button,
 .planificar-horario-button,
 .agregar-bloque-button {
   border: none;
@@ -29,10 +30,8 @@
   width: 100%;
   display: flex;
   justify-content: center;
-  align-items: center;
+  align-items: flex-start;
   background: linear-gradient(270deg, #DE6ADE, #200064d0);
-  position: relative;
-
   font-family: 'Inter', sans-serif;
   padding: 18px;
   box-sizing: border-box;
@@ -45,7 +44,7 @@
   z-index: 1;
   width: 100%;
   max-width: 1080px;
-  max-height: 90vh;
+  max-height: none;
   background: rgb(252, 252, 252);
   border: 1px solid rgb(255, 255, 255);
   border-radius: 28px;
@@ -113,7 +112,7 @@
 
 /* --- Grilla --- */
 .plan-grid-wrapper {
-  max-height: 70vh;
+  max-height: min(70vh, 780px);
   overflow-y: auto;
   overflow-x: auto;
   scrollbar-width: none;
@@ -449,6 +448,12 @@
   .plan-nav {
     align-self: flex-start;
   }
+
+  .planificar-buttons { justify-content: flex-start; flex-wrap: wrap; }
+  .materias-modal { max-height: 92vh; border-radius: 14px; }
+  .materias-modal-header,
+  .materias-modal-footer { padding: 12px 16px; }
+  .materias-modal-body { padding: 12px 16px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -467,6 +472,70 @@
 .plan-grid-wrapper::-webkit-scrollbar {
   display: none;
 }
+
+.materias-resumen {
+  margin: 0 0 18px;
+  padding: 12px 16px;
+  border: 1px solid #e8e2f4;
+  border-radius: 12px;
+  background: #fcfbfe;
+  color: #514a68;
+  font-size: 13px;
+}
+
+.materias-resumen h2 {
+  margin: 0 0 6px;
+  color: #392477;
+  font: 600 14px 'Sora', sans-serif;
+}
+
+.materias-resumen p,
+.materias-resumen ul { margin: 0; }
+.materias-resumen ul { display: flex; flex-wrap: wrap; gap: 5px 18px; padding-left: 18px; }
+
+.materias-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  box-sizing: border-box;
+  background: rgba(32, 0, 100, .58);
+}
+
+.materias-modal {
+  display: flex;
+  flex-direction: column;
+  width: min(900px, calc(100vw - 32px));
+  max-height: 90vh;
+  overflow: hidden;
+  border-radius: 20px;
+  background: #fff;
+  box-shadow: 0 24px 70px rgba(15, 8, 42, .4);
+}
+
+.materias-modal-header,
+.materias-modal-footer {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 20px;
+  color: #392477;
+}
+
+.materias-modal-header { border-bottom: 1px solid #ece8f6; }
+.materias-modal-header h2 { margin: 0; font: 600 19px 'Sora', sans-serif; }
+.materias-modal-close { border: 0; background: transparent; color: #6d5fb3; font-size: 28px; line-height: 1; cursor: pointer; }
+.materias-modal-body { overflow-y: auto; padding: 16px 20px; }
+.materias-modal-body .materias-disponibles { margin: 0; padding: 0; border: 0; }
+.materias-modal-footer { justify-content: flex-end; border-top: 1px solid #ece8f6; }
+.materias-modal-footer button { padding: 9px 14px; border: 0; border-radius: 9px; font: 600 13px 'Inter', sans-serif; cursor: pointer; }
+.materias-modal-cancelar { background: #f2effb; color: #514a68; }
+.materias-modal-aplicar { background: linear-gradient(270deg, #de6ade, #200064); color: #fff; }
 
 .plan-header-text {
     flex-direction: column;
@@ -716,5 +785,187 @@
   .materia-disponible-grupos { margin-left: 29px; }
   .materia-grupos { margin-left: 0; }
   .materia-grupo { grid-template-columns: 1fr; gap: 6px; }
+}
+
+/* PlanPage usa el mismo sistema visual que Inicio, Calendario y Plan de estudio. */
+.plan-page {
+  --plan-noche: #12003a;
+  --plan-violeta: #200064;
+  --plan-violeta-claro: #7c5cfc;
+  --plan-rosa: #de6ade;
+  --plan-texto: #1f1b3a;
+  --plan-suave: #5b5680;
+  --plan-borde: #e4def7;
+
+  display: block;
+  min-height: 100vh;
+  padding: 0;
+  background: #f7f5fd;
+  color: var(--plan-texto);
+}
+
+.plan-card {
+  display: grid;
+  gap: 18px;
+  width: 100%;
+  max-width: none;
+  padding: 0 0 40px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+}
+
+.plan-header {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 20px;
+  margin: 0;
+  padding: 36px clamp(20px, 4vw, 48px) 30px;
+  overflow: hidden;
+  color: #fff;
+  background:
+    radial-gradient(circle at 88% 0%, rgba(222, 106, 222, .35), transparent 28rem),
+    linear-gradient(160deg, var(--plan-noche), var(--plan-violeta) 70%, #3a0a7a);
+}
+
+.plan-header-text { flex: 1 1 320px; min-width: 0; }
+.plan-etiqueta {
+  display: inline-block;
+  padding: 5px 14px;
+  border: 1px solid rgba(255, 255, 255, .2);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .12);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.plan-title {
+  margin-top: 12px;
+  color: #fff;
+  font-size: clamp(26px, 3.4vw, 36px);
+  font-weight: 700;
+  line-height: 1.15;
+}
+
+.plan-subtitle {
+  max-width: 620px;
+  margin-top: 8px;
+  color: #e4dcff;
+  font-size: 15px;
+  line-height: 1.55;
+  text-transform: none;
+}
+
+.planificar-buttons {
+  justify-content: flex-start;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 0;
+}
+
+.ingresar-horario-button,
+.seleccionar-materias-button,
+.planificar-horario-button,
+.agregar-bloque-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 42px;
+  padding: 10px 16px;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  font: 600 13px 'Inter', sans-serif;
+  transition: transform .15s ease, box-shadow .2s ease, background .15s ease;
+}
+
+.ingresar-horario-button { border-color: rgba(255, 255, 255, .42); background: rgba(255, 255, 255, .1); color: #fff; }
+.seleccionar-materias-button { background: linear-gradient(90deg, var(--plan-rosa), #f08af0); color: var(--plan-noche); }
+.planificar-horario-button { background: #fff; color: var(--plan-violeta); }
+.agregar-bloque-button { background: transparent; border-color: rgba(255, 255, 255, .35); color: #fff; }
+.planificar-buttons button:hover { transform: translateY(-2px); box-shadow: 0 8px 22px rgba(18, 0, 58, .2); }
+.plan-page button:focus-visible,
+.plan-page select:focus-visible,
+.plan-page input:focus-visible { outline: 3px solid #c46bef; outline-offset: 2px; }
+
+.plan-periodo-selector,
+.materias-resumen,
+.planificacion-alternativas,
+.planificacion-feedback,
+.plan-grid-shell {
+  width: min(1500px, calc(100% - 2 * clamp(20px, 4vw, 48px)));
+  margin-right: auto;
+  margin-left: auto;
+  box-sizing: border-box;
+}
+
+.plan-periodo-selector {
+  margin-top: 2px;
+  margin-bottom: 0;
+  padding: 18px;
+  border: 1px solid var(--plan-borde);
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 8px 24px rgba(32, 0, 100, .06);
+}
+
+.plan-periodo-selector label { color: var(--plan-violeta); }
+.plan-periodo-selector select,
+.plan-periodo-selector input { border-color: #d9d2f5; border-radius: 10px; }
+.plan-periodo-selector select:focus,
+.plan-periodo-selector input:focus { border-color: var(--plan-violeta-claro); box-shadow: 0 0 0 4px rgba(124, 92, 252, .16); outline: none; }
+
+.materias-resumen {
+  margin-top: 0;
+  margin-bottom: 0;
+  border-color: var(--plan-borde);
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 8px 24px rgba(32, 0, 100, .05);
+}
+
+.planificacion-alternativas { margin-top: 0; }
+.planificacion-feedback { margin-top: 0; }
+
+.plan-grid-shell {
+  margin-top: 0;
+  border: 1px solid var(--plan-borde);
+  border-radius: 20px;
+  background: #fff;
+  box-shadow: 0 10px 30px rgba(32, 0, 100, .08);
+}
+
+.plan-grid-wrapper { max-height: min(68vh, 780px); }
+.plan-grid { grid-template-columns: 68px repeat(7, minmax(110px, 1fr)); }
+.plan-cell { border-color: #efebfb; }
+.plan-corner,
+.plan-day-head { background: #faf8ff; color: var(--plan-violeta); }
+.plan-day-nombre { color: var(--plan-violeta); }
+.plan-day-numero { color: var(--plan-suave); }
+.plan-hora { background: #fff; color: var(--plan-suave); }
+.plan-slot:hover { background: #faf8ff; }
+.plan-slot-mas { color: #a69bc9; }
+.plan-event { border-color: #d9d0f7; background: #eee9ff; color: var(--plan-violeta); }
+.plan-event--conflict { border-color: #a61e32; background: #c43d51; color: #fff; }
+
+@media (max-width: 720px) {
+  .plan-header { align-items: stretch; padding-top: 28px; }
+  .planificar-buttons { justify-content: flex-start; }
+  .planificar-buttons button { flex: 1 1 auto; }
+  .plan-periodo-selector { width: calc(100% - 32px); padding: 14px; }
+  .materias-resumen,
+  .planificacion-alternativas,
+  .planificacion-feedback,
+  .plan-grid-shell { width: calc(100% - 32px); }
+  .plan-grid-wrapper { max-height: 62vh; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .planificar-buttons button { transition: none; }
 }
 

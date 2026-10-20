@@ -34,6 +34,7 @@ async function leerJson(res) {
 
 function PlanPage({ emailUsuario }) {
   const [mostrarImportacionHorarios, setMostrarImportacionHorarios] = useState(false)
+  const [mostrarMaterias, setMostrarMaterias] = useState(false)
   const [planificacion, setPlanificacion] = useState(null)
   const [planificacionPendiente, setPlanificacionPendiente] = useState(false)
   const [alternativas, setAlternativas] = useState(null)
@@ -180,6 +181,15 @@ function PlanPage({ emailUsuario }) {
     return () => window.removeEventListener('keydown', cerrarConEscape)
   }, [mostrarImportacionHorarios])
 
+  useEffect(() => {
+    if (!mostrarMaterias) return undefined
+    const cerrarConEscape = (event) => {
+      if (event.key === 'Escape') setMostrarMaterias(false)
+    }
+    window.addEventListener('keydown', cerrarConEscape)
+    return () => window.removeEventListener('keydown', cerrarConEscape)
+  }, [mostrarMaterias])
+
   function invalidarPlanificacion() {
     if (planificacion) {
       setPlanificacion(null)
@@ -321,6 +331,8 @@ function PlanPage({ emailUsuario }) {
 
           <div className="plan-header-text">
 
+            <span className="plan-etiqueta">Planificación académica</span>
+
             <h1 className="plan-title">
               Planificador de horarios
             </h1>
@@ -340,6 +352,14 @@ function PlanPage({ emailUsuario }) {
               onClick={() => setMostrarImportacionHorarios(true)}
             >
               Ingresar horarios
+            </button>
+
+            <button
+              className="seleccionar-materias-button"
+              type="button"
+              onClick={() => setMostrarMaterias(true)}
+            >
+              Seleccionar materias
             </button>
 
             <button
@@ -382,17 +402,20 @@ function PlanPage({ emailUsuario }) {
           </label>
         </div>
 
-        <MateriasDisponibles
-          materias={materiasCandidatas}
-          materiasSinOferta={materiasSinOferta}
-          materiasBloqueadas={materiasBloqueadas}
-          seleccionadas={materiasSeleccionadas}
-          cargando={cargandoCarreras || cargandoPlan || cargandoHorarios || cargandoEstado}
-          error={errorDisponibilidad}
-          carrera={carrera}
-          onSeleccionar={seleccionarMateria}
-          onSeleccionarGrupo={seleccionarGrupo}
-        />
+        <section className="materias-resumen" aria-labelledby="materias-resumen-titulo">
+          <h2 id="materias-resumen-titulo">Materias seleccionadas</h2>
+          {Object.entries(materiasSeleccionadas).filter(([, estado]) => estado.seleccionada).length > 0 ? (
+            <ul>
+              {Object.entries(materiasSeleccionadas)
+                .filter(([, estado]) => estado.seleccionada)
+                .map(([nombre, estado]) => (
+                  <li key={nombre}>{nombre} · Grupo {estado.grupo || 'pendiente'}</li>
+                ))}
+            </ul>
+          ) : (
+            <p>Todavía no seleccionaste materias.</p>
+          )}
+        </section>
 
         {alternativas?.length > 0 && (
           <section className="planificacion-alternativas" aria-labelledby="planificacion-alternativas-titulo">
@@ -586,6 +609,46 @@ function PlanPage({ emailUsuario }) {
             </div>
             <footer className="horarios-import-modal-footer">
               <button type="button" onClick={() => setMostrarImportacionHorarios(false)}>Cancelar</button>
+            </footer>
+          </section>
+        </div>
+      )}
+
+      {mostrarMaterias && (
+        <div
+          className="materias-modal-overlay"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) setMostrarMaterias(false)
+          }}
+        >
+          <section className="materias-modal" role="dialog" aria-modal="true" aria-labelledby="materias-modal-titulo">
+            <header className="materias-modal-header">
+              <h2 id="materias-modal-titulo">Seleccionar materias</h2>
+              <button
+                type="button"
+                className="materias-modal-close"
+                aria-label="Cerrar selección de materias"
+                onClick={() => setMostrarMaterias(false)}
+              >
+                ×
+              </button>
+            </header>
+            <div className="materias-modal-body">
+              <MateriasDisponibles
+                materias={materiasCandidatas}
+                materiasSinOferta={materiasSinOferta}
+                materiasBloqueadas={materiasBloqueadas}
+                seleccionadas={materiasSeleccionadas}
+                cargando={cargandoCarreras || cargandoPlan || cargandoHorarios || cargandoEstado}
+                error={errorDisponibilidad}
+                carrera={carrera}
+                onSeleccionar={seleccionarMateria}
+                onSeleccionarGrupo={seleccionarGrupo}
+              />
+            </div>
+            <footer className="materias-modal-footer">
+              <button type="button" className="materias-modal-cancelar" onClick={() => setMostrarMaterias(false)}>Cancelar</button>
+              <button type="button" className="materias-modal-aplicar" onClick={() => setMostrarMaterias(false)}>Aplicar selección</button>
             </footer>
           </section>
         </div>
