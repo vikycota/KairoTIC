@@ -12,9 +12,10 @@ INSERT INTO Personas (Email, Nombre, Apellido, Contrasena, Beca) VALUES
 ('diego.alvarez@um.edu.uy',   'Diego',    'Álvarez',  '$2b$12$dummyhash0000000000000000000000000000000006', 0.00);
 
 -- ---------- CARRERAS ----------
-INSERT INTO Carreras (Nombre, Valor_Credito) VALUES
-('Ingeniería en Data Engineering y AI', 45.50),
-('Ingeniería en Sistemas',              42.00);
+-- Umbral demo configurable por carrera; 6.00 es un valor inicial, no una regla global.
+INSERT INTO Carreras (Nombre, Valor_Credito, Nota_Minima_Aprobacion) VALUES
+('Ingeniería en Data Engineering y AI', 45.50, 6.00),
+('Ingeniería en Sistemas',              42.00, 6.00);
 
 -- ---------- SEMESTRES ----------
 INSERT INTO Semestres (Nombre, Anio, Cantidad_de_Creditos) VALUES
@@ -54,15 +55,15 @@ INSERT INTO Previas (Materias_Nombre, Previa_Nombre) VALUES
 ('Ingeniería de Datos a Escala', 'Sistemas Distribuidos');
 
 -- ---------- EXAMENES ----------
-INSERT INTO Examenes (Fecha, Materias_Nombre, Nota) VALUES
-('2025-07-10', 'Introducción a la Programación', 8.50),
-('2025-07-12', 'Matemática Discreta',             6.00),
-('2025-07-15', 'Álgebra Lineal',                  7.25),
-('2025-12-03', 'Estructuras de Datos',            9.00),
-('2025-12-05', 'Bases de Datos I',                7.75),
-('2026-02-20', 'Probabilidad y Estadística',      5.50),
-('2026-02-22', 'Bases de Datos II',               8.00),
-('2026-07-01', 'Machine Learning I',              9.25);
+INSERT INTO Examenes (Fecha, Materias_Nombre) VALUES
+('2025-07-10', 'Introducción a la Programación'),
+('2025-07-12', 'Matemática Discreta'),
+('2025-07-15', 'Álgebra Lineal'),
+('2025-12-03', 'Estructuras de Datos'),
+('2025-12-05', 'Bases de Datos I'),
+('2026-02-20', 'Probabilidad y Estadística'),
+('2026-02-22', 'Bases de Datos II'),
+('2026-07-01', 'Machine Learning I');
 
 -- =====================================================
 -- TABLAS DE RELACIÓN
@@ -126,12 +127,12 @@ INSERT INTO Se_Organiza_En (Semestres_Nombre, Semestres_Anio, Materias_Nombre) V
 ('Semestre 2', 3, 'Ingeniería de Datos a Escala');
 
 -- ---------- HACEN (Personas <-> Examenes) ----------
-INSERT INTO Hacen (Email, Examenes_Fecha, Materias_Nombre) VALUES
-('lucas.fernandez@um.edu.uy', '2025-07-10', 'Introducción a la Programación'),
-('lucas.fernandez@um.edu.uy', '2025-07-12', 'Matemática Discreta'),
-('sofia.martinez@um.edu.uy',  '2025-07-15', 'Álgebra Lineal'),
-('sofia.martinez@um.edu.uy',  '2025-12-03', 'Estructuras de Datos'),
-('maria.rodriguez@um.edu.uy', '2025-12-05', 'Bases de Datos I'),
-('maria.rodriguez@um.edu.uy', '2026-02-22', 'Bases de Datos II'),
-('carolina.perez@um.edu.uy',  '2026-02-20', 'Probabilidad y Estadística'),
-('juan.gomez@um.edu.uy',      '2026-07-01', 'Machine Learning I');
+INSERT INTO Hacen (Email, Examenes_Fecha, Materias_Nombre, Nota) VALUES
+('lucas.fernandez@um.edu.uy', '2025-07-10', 'Introducción a la Programación', 8.50),
+('lucas.fernandez@um.edu.uy', '2025-07-12', 'Matemática Discreta', 6.00),
+('sofia.martinez@um.edu.uy',  '2025-07-15', 'Álgebra Lineal', 7.25),
+('sofia.martinez@um.edu.uy',  '2025-12-03', 'Estructuras de Datos', 9.00),
+('maria.rodriguez@um.edu.uy', '2025-12-05', 'Bases de Datos I', 7.75),
+('maria.rodriguez@um.edu.uy', '2026-02-22', 'Bases de Datos II', 8.00),
+('carolina.perez@um.edu.uy',  '2026-02-20', 'Probabilidad y Estadística', 5.50),
+('juan.gomez@um.edu.uy',      '2026-07-01', 'Machine Learning I', 9.25);

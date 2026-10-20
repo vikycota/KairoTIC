@@ -82,7 +82,6 @@ function WeeklyPlanner() {
 
   return (
     <main className="planner-page">
-
       <section className="planner-card">
         <header className="planner-header">
           <div>

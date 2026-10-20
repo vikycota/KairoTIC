@@ -9,8 +9,9 @@ CREATE TABLE Personas (
 );
 
 CREATE TABLE Carreras (
-    Nombre          VARCHAR(100)    NOT NULL,
-    Valor_Credito   NUMERIC(10,2)   NOT NULL,
+    Nombre                    VARCHAR(100)    NOT NULL,
+    Valor_Credito             NUMERIC(10,2)   NOT NULL,
+    Nota_Minima_Aprobacion    NUMERIC(4,2)    NOT NULL DEFAULT 6.00,
     CONSTRAINT pk_carreras PRIMARY KEY (Nombre)
 );
 
@@ -51,7 +52,6 @@ CREATE TABLE Previas (
 CREATE TABLE Examenes (
     Fecha            DATE            NOT NULL,
     Materias_Nombre  VARCHAR(100)    NOT NULL,
-    Nota             NUMERIC(4,2)    NOT NULL,
     CONSTRAINT pk_examenes PRIMARY KEY (Fecha, Materias_Nombre),
     CONSTRAINT fk_examenes_materia
         FOREIGN KEY (Materias_Nombre)
@@ -113,6 +113,34 @@ CREATE TABLE Tiene (
         ON DELETE CASCADE
 );
 
+CREATE TABLE Horarios (
+    Id                  SERIAL          PRIMARY KEY,
+    Carrera_Nombre      VARCHAR(100)    NOT NULL,
+    Materia_Nombre      VARCHAR(100)    NOT NULL,
+    Anio_Lectivo        INTEGER         NOT NULL CHECK (Anio_Lectivo BETWEEN 1900 AND 9999),
+    Semestre_Lectivo    INTEGER         NOT NULL CHECK (Semestre_Lectivo IN (1, 2)),
+    Anio_Carrera        INTEGER         NULL CHECK (Anio_Carrera IS NULL OR Anio_Carrera > 0),
+    Grupo               VARCHAR(50)     NOT NULL DEFAULT 'General',
+    Dia                 VARCHAR(10)     NOT NULL CHECK (Dia IN ('Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado')),
+    Hora_Inicio         TIME            NOT NULL,
+    Hora_Fin            TIME            NOT NULL,
+    Docente             VARCHAR(250)    NULL,
+    Tipo                VARCHAR(50)     NOT NULL DEFAULT 'Clase',
+    Opcional            BOOLEAN         NOT NULL DEFAULT FALSE,
+    CONSTRAINT chk_horarios_rango CHECK (Hora_Fin > Hora_Inicio),
+    CONSTRAINT fk_horarios_tiene FOREIGN KEY (Carrera_Nombre, Materia_Nombre)
+        REFERENCES Tiene (Carreras_Nombre, Materias_Nombre)
+        ON UPDATE CASCADE ON DELETE CASCADE
+);
+
+CREATE INDEX idx_horarios_periodo
+    ON Horarios (Carrera_Nombre, Anio_Lectivo, Semestre_Lectivo);
+
+CREATE UNIQUE INDEX uq_horarios_bloque
+    ON Horarios (Carrera_Nombre, Materia_Nombre, Anio_Lectivo, Semestre_Lectivo,
+                 COALESCE(Anio_Carrera, 0), Grupo, Dia, Hora_Inicio, Hora_Fin,
+                 COALESCE(Docente, ''), Tipo, Opcional);
+
 CREATE TABLE Se_Organiza_En (
     Semestres_Nombre   VARCHAR(50)     NOT NULL,
     Semestres_Anio     INT             NOT NULL,
@@ -134,6 +162,7 @@ CREATE TABLE Hacen (
     Email               VARCHAR(150)    NOT NULL,
     Examenes_Fecha      DATE            NOT NULL,
     Materias_Nombre     VARCHAR(100)    NOT NULL,
+    Nota                NUMERIC(4,2)    NOT NULL,
     CONSTRAINT pk_hacen PRIMARY KEY (Email, Examenes_Fecha, Materias_Nombre),
     CONSTRAINT fk_hacen_persona
         FOREIGN KEY (Email)

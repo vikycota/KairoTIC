@@ -4,7 +4,7 @@ import './pagesCSS/RegisterPage.css'
 import './pagesCSS/SidebarMenu.css'
 import './pagesCSS/StudyPlanPage.css'
 import './App.css'
-import './PagesCSS/PlanPage.css'
+import './pagesCSS/PlanPage.css'
 import "./pagesCSS/ConfigPage.css"
 import "./pagesCSS/WeeklyPlanner.css"
 
@@ -13,7 +13,6 @@ import RegisterPage from './pages/RegisterPage'
 import WeeklyPlanner from './pages/WeeklyPlanner'
 import SidebarMenu from './pages/SidebarMenu'
 import StudyPlanPage from './pages/StudyPlanPage'
-import easteregg from './assets/easteregg.webp'
 import PlanPage from './pages/PlanPage'
 import ProgresoPage from './pages/ProgresoPage'
 import ConfigPage from "./pages/ConfigPage"
@@ -81,7 +80,7 @@ function App() {
 
         {vista === 'progreso' && <ProgresoPage emailUsuario={usuario.email} />}
 
-        {vista === 'planificar' && <PlanPage />}
+        {vista === 'planificar' && <PlanPage emailUsuario={usuario.email} />}
           
         {vista === 'ajustes' && <ConfigPage />}
       </main>

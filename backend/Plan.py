@@ -1098,7 +1098,6 @@ def obtener_plan():
                     ON so.Materias_Nombre =
                        m.Nombre
 
-
                 LEFT JOIN Semestres s
 
                     ON s.Nombre =
@@ -1177,12 +1176,7 @@ def obtener_plan():
                 "semestre":
                     numero_semestre,
 
-                "previas":
-                    (
-                        [previa]
-                        if previa
-                        else []
-                    ),
+                "previas": [previa] if previa else [],
             })
 
 

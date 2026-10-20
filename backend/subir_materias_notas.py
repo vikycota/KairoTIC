@@ -25,8 +25,6 @@ def _validar_nota(valor):
         raise ValidationError("El campo 'nota' debe ser un número.")
     if not nota.is_finite() or not (NOTA_MINIMA <= nota <= NOTA_MAXIMA):
         raise ValidationError(f"La nota debe estar entre {NOTA_MINIMA} y {NOTA_MAXIMA}.")
-    if nota != nota.to_integral_value():
-        raise ValidationError("La nota debe ser un número entero.")
     return nota
 
 
@@ -66,7 +64,7 @@ def agregar_materia_completada():
     """
     Registra que el alumno completó una materia con una nota.
     Body: {"email", "materia", "nota", "fecha"}.
-    Guarda en Examenes (fecha, materia, nota), Hacen (alumno <-> examen) y
+    Guarda el examen en Examenes y la nota del alumno en Hacen, y
     marca la materia como finalizada en Cursan.
     """
     data = request.get_json(silent=True)
@@ -100,21 +98,6 @@ def agregar_materia_completada():
         )
         anteriores = [f for (f,) in cur.fetchall()]
 
-        # Examenes no distingue alumnos: (fecha, materia) es única. Si otro alumno ya
-        # registró ese examen con otra nota no se puede pisar sin alterar su resultado.
-        cur.execute(
-            "SELECT Nota FROM Examenes WHERE Fecha = %s AND Materias_Nombre = %s",
-            (fecha, materia),
-        )
-        existente = cur.fetchone()
-        if existente and Decimal(existente[0]) != nota:
-            hecho_por_otros = fecha not in anteriores
-            if hecho_por_otros:
-                cur.close()
-                return jsonify({
-                    "error": "Ya hay otro examen de esa materia en esa fecha con una nota distinta."
-                }), 409
-
         for f in anteriores:
             if f != fecha:
                 cur.execute(
@@ -123,17 +106,19 @@ def agregar_materia_completada():
                 )
         cur.execute(
             """
-            INSERT INTO Examenes (Fecha, Materias_Nombre, Nota) VALUES (%s, %s, %s)
-            ON CONFLICT (Fecha, Materias_Nombre) DO UPDATE SET Nota = EXCLUDED.Nota
+            INSERT INTO Examenes (Fecha, Materias_Nombre) VALUES (%s, %s)
+            ON CONFLICT (Fecha, Materias_Nombre) DO NOTHING
             """,
-            (fecha, materia, nota),
+            (fecha, materia),
         )
         cur.execute(
             """
-            INSERT INTO Hacen (Email, Examenes_Fecha, Materias_Nombre) VALUES (%s, %s, %s)
-            ON CONFLICT DO NOTHING
+            INSERT INTO Hacen (Email, Examenes_Fecha, Materias_Nombre, Nota)
+            VALUES (%s, %s, %s, %s)
+            ON CONFLICT (Email, Examenes_Fecha, Materias_Nombre)
+            DO UPDATE SET Nota = EXCLUDED.Nota
             """,
-            (email, fecha, materia),
+            (email, fecha, materia, nota),
         )
         cur.execute(
             """
@@ -149,7 +134,7 @@ def agregar_materia_completada():
         return jsonify({
             "message": "Materia completada guardada correctamente.",
             "materia": materia,
-            "nota": int(nota),
+            "nota": float(nota),
             "fecha": fecha.isoformat(),
         }), 201
 
@@ -180,9 +165,8 @@ def listar_materias_completadas():
         cur = conn.cursor()
         cur.execute(
             """
-            SELECT h.Materias_Nombre, m.Cantidad_de_Creditos, e.Nota, h.Examenes_Fecha
+            SELECT h.Materias_Nombre, m.Cantidad_de_Creditos, h.Nota, h.Examenes_Fecha
             FROM Hacen h
-            JOIN Examenes e ON e.Fecha = h.Examenes_Fecha AND e.Materias_Nombre = h.Materias_Nombre
             JOIN Materias m ON m.Nombre = h.Materias_Nombre
             WHERE h.Email = %s
             ORDER BY h.Examenes_Fecha DESC, h.Materias_Nombre
@@ -190,7 +174,7 @@ def listar_materias_completadas():
             (email,),
         )
         materias = [
-            {"materia": n, "creditos": c, "nota": int(nota), "fecha": f.isoformat()}
+            {"materia": n, "creditos": c, "nota": float(nota), "fecha": f.isoformat()}
             for n, c, nota, f in cur.fetchall()
         ]
         cur.close()

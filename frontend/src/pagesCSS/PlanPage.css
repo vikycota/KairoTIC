@@ -193,6 +193,7 @@
   justify-content: center;
 }
 .plan-slot {
+  position: relative;
   min-height: 44px;
   display: flex;
   align-items: center;
@@ -263,6 +264,177 @@
   opacity: 1;
 }
 
+.plan-event {
+  position: absolute;
+  top: var(--bloque-top);
+  left: 3px;
+  right: 3px;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  height: var(--bloque-altura);
+  overflow: hidden;
+  box-sizing: border-box;
+  padding: 4px 6px;
+  border: 1px solid #fff;
+  border-radius: 7px;
+  background: #7556c8;
+  color: #fff;
+  font-size: 10px;
+  line-height: 1.15;
+  text-align: left;
+  pointer-events: none;
+}
+
+.plan-event strong,
+.plan-event span,
+.plan-event small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.plan-event--conflict {
+  border: 2px solid #a61e32;
+  background: #c43d51;
+  box-shadow: 0 0 0 1px #fff;
+}
+
+.planificacion-feedback {
+  margin: -4px 0 12px;
+  color: #514a68;
+  font-size: 12px;
+}
+
+.planificacion-feedback p {
+  margin: 6px 0;
+}
+
+.planificacion-compatible {
+  color: #267247;
+  font-weight: 700;
+}
+
+.planificacion-conflicto,
+.planificacion-error {
+  color: #a61e32;
+  font-weight: 700;
+}
+
+.planificacion-pendiente {
+  color: #73551d;
+  font-weight: 600;
+}
+
+.planificacion-conflictos {
+  display: grid;
+  gap: 8px;
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.planificacion-conflictos li {
+  display: grid;
+  gap: 3px;
+  padding: 8px 10px;
+  border-left: 3px solid #c43d51;
+  border-radius: 4px;
+  background: #fff4f4;
+}
+
+.planificacion-alternativas {
+  margin: 0 0 14px;
+  padding: 14px;
+  border: 1px solid #e8e2f4;
+  border-radius: 12px;
+  background: #fff;
+  color: #514a68;
+  font-size: 12px;
+}
+
+.planificacion-alternativas h2 {
+  margin: 0 0 10px;
+  color: #392477;
+  font: 600 15px 'Sora', sans-serif;
+}
+
+.planificacion-alternativas > ol {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 10px;
+  max-height: 360px;
+  overflow: auto;
+  margin: 0;
+  padding: 0 6px 0 22px;
+}
+
+.planificacion-alternativas > ol > li {
+  padding: 10px;
+  border: 1px solid #eeeaf5;
+  border-radius: 9px;
+  background: #fcfbfe;
+}
+
+.planificacion-alternativas > ol > .planificacion-alternativa-recomendada {
+  border-color: #a990e8;
+  background: #f8f5ff;
+}
+
+.planificacion-alternativas h3 {
+  margin: 0 0 6px;
+  color: #33275b;
+  font-size: 12px;
+}
+
+.planificacion-alternativas ul {
+  display: grid;
+  gap: 4px;
+  margin: 0 0 10px;
+  padding-left: 16px;
+}
+
+.planificacion-recomendada {
+  display: inline-block;
+  margin: 0 0 8px;
+  padding: 3px 7px;
+  border-radius: 999px;
+  background: #e7defb;
+  color: #51359a;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.planificacion-metricas {
+  display: grid;
+  gap: 3px;
+  margin: 0 0 10px;
+  color: #625883;
+  font-size: 11px;
+}
+
+.planificacion-alternativa-acciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.planificacion-alternativa-acciones button {
+  padding: 6px 9px;
+  border: 1px solid #d9d2f5;
+  border-radius: 7px;
+  background: #f6f3fb;
+  color: #392477;
+  font: inherit;
+  cursor: pointer;
+}
+
+.planificacion-alternativa-acciones button:hover,
+.planificacion-alternativa-acciones button[aria-pressed='true'] {
+  background: #e8e0fa;
+}
+
 @media (max-width: 720px) {
   .plan-card {
     padding: 20px 16px 16px;
@@ -299,5 +471,250 @@
 .plan-header-text {
     flex-direction: column;
   
+}
+
+.plan-periodo-selector {
+  display: grid;
+  grid-template-columns: minmax(220px, 1.5fr) repeat(2, minmax(120px, .6fr));
+  gap: 12px;
+  margin: 0 0 18px;
+}
+
+.plan-periodo-selector label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: #514a68;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.plan-periodo-selector select,
+.plan-periodo-selector input {
+  min-width: 0;
+  height: 40px;
+  box-sizing: border-box;
+  padding: 8px 10px;
+  border: 1px solid #d9d2f5;
+  border-radius: 9px;
+  background: #fff;
+  color: #302b42;
+  font: 13px 'Inter', sans-serif;
+}
+
+.materias-disponibles {
+  margin: 0 0 20px;
+  padding: 18px;
+  border: 1px solid #e8e2f4;
+  border-radius: 16px;
+  background: #fff;
+  color: #302b42;
+}
+
+.materias-disponibles-header h2 {
+  margin: 0;
+  color: #392477;
+  font: 600 18px 'Sora', sans-serif;
+}
+
+.materias-disponibles-header p,
+.materias-disponibles-vacio,
+.materias-sin-oferta {
+  margin: 6px 0 12px;
+  color: #706b80;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.materias-no-habilitadas {
+  margin-top: 16px;
+  padding: 12px 14px;
+  border: 1px solid #eee2c8;
+  border-radius: 11px;
+  background: #fffcf5;
+}
+
+.materias-no-habilitadas h3 {
+  margin: 0 0 8px;
+  color: #73551d;
+  font: 600 13px 'Sora', sans-serif;
+}
+
+.materias-no-habilitadas ul {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.materias-no-habilitadas li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  color: #514a68;
+  font-size: 12px;
+}
+
+.materias-no-habilitadas li span {
+  color: #756f84;
+}
+
+.materias-disponibles-lista {
+  display: grid;
+  gap: 9px;
+}
+
+.materia-disponible {
+  padding: 12px;
+  border: 1px solid #eeeaf5;
+  border-radius: 11px;
+  background: #fcfbfe;
+}
+
+.materia-disponible-seleccion {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+}
+
+.materia-disponible-seleccion input,
+.materia-grupo-opcion input { accent-color: #7654da; }
+
+.materia-disponible-nombre {
+  color: #33275b;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.materia-disponible-grupos {
+  margin-left: auto;
+  color: #756f84;
+  font-size: 11px;
+}
+
+.materia-grupos {
+  display: grid;
+  gap: 8px;
+  margin: 12px 0 0 25px;
+}
+
+.materia-grupo {
+  display: grid;
+  grid-template-columns: minmax(120px, .4fr) 1.6fr;
+  gap: 12px;
+  padding: 9px 10px;
+  border-radius: 9px;
+  background: #f6f3fb;
+  color: #514a68;
+  font-size: 12px;
+}
+
+.materia-grupo-opcion {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.materia-grupo-horarios {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px 12px;
+}
+
+.plan-datos-error {
+  margin: 10px 0;
+  color: #a52f28;
+  font-size: 13px;
+}
+
+.horarios-import-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+  box-sizing: border-box;
+  background: rgba(32, 0, 100, .58);
+}
+
+.horarios-import-modal {
+  display: flex;
+  flex-direction: column;
+  width: min(1080px, 100%);
+  max-height: 92vh;
+  overflow: hidden;
+  border-radius: 20px;
+  background: #fff;
+  box-shadow: 0 24px 70px rgba(15, 8, 42, .4);
+}
+
+.horarios-import-modal-header,
+.horarios-import-modal-footer {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 20px;
+  border-bottom: 1px solid #ece8f6;
+  color: #392477;
+}
+
+.horarios-import-modal-header h2 {
+  margin: 0;
+  font: 600 19px 'Sora', sans-serif;
+}
+
+.horarios-import-modal-close {
+  border: 0;
+  background: transparent;
+  color: #6d5fb3;
+  font-size: 28px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.horarios-import-modal-body {
+  overflow-y: auto;
+}
+
+.horarios-import-modal-body .schedule-import-card {
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.horarios-import-modal-footer {
+  justify-content: flex-end;
+  border-top: 1px solid #ece8f6;
+  border-bottom: 0;
+}
+
+.horarios-import-modal-footer button {
+  padding: 9px 16px;
+  border: 0;
+  border-radius: 9px;
+  background: #f2effb;
+  color: #514a68;
+  font: 600 13px 'Inter', sans-serif;
+  cursor: pointer;
+}
+
+@media (max-width: 600px) {
+  .horarios-import-modal-overlay { padding: 8px; }
+  .horarios-import-modal { max-height: 96vh; border-radius: 14px; }
+  .horarios-import-modal-header { padding: 12px 16px; }
+}
+
+@media (max-width: 720px) {
+  .plan-periodo-selector { grid-template-columns: 1fr 1fr; }
+  .plan-periodo-selector label:first-child { grid-column: 1 / -1; }
+  .materia-disponible-seleccion { flex-wrap: wrap; }
+  .materia-disponible-grupos { margin-left: 29px; }
+  .materia-grupos { margin-left: 0; }
+  .materia-grupo { grid-template-columns: 1fr; gap: 6px; }
 }
 

@@ -1,0 +1,6 @@
+materia,anio_carrera,grupo,dia,hora_inicio,hora_fin,docente,tipo,opcional
+Introducción a la Programación,1,1,Lunes,08:00,08:50,Docente de ejemplo,Clase,false
+Álgebra Lineal,1,1,Lunes,08:50,09:40,Docente de ejemplo,Clase,false
+Bases de Datos I,2,1,Lunes,10:40,11:30,Docente de ejemplo,Clase,false
+Estructuras de Datos,2,1,Miércoles,08:00,08:50,Docente de ejemplo,Clase,false
+Sistemas Distribuidos,3,1,Lunes,14:10,16:00,,Práctico,true
