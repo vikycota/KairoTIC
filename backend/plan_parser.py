@@ -447,32 +447,17 @@ def validar_plan(raw, carrera=None, existentes=None, semestres_existentes=None):
 # Plantillas descargables
 # ---------------------------------------------------------------------------
 
-PLANTILLA_FILAS = [
-    ("1", "Análisis Mat. I", 10, "C. Básicas comunes", ""),
-    ("1", "Programación I", 6, "Informática comunes", ""),
-    ("2", "Análisis Mat. II", 10, "C. Básicas comunes", "Análisis Mat. I"),
-    ("2", "Diseño de Base de Datos I", 6, "Informática comunes", "Programación I"),
-    ("3", "Programación II", 6, "Ingeniería aplicada", "Programación I; Diseño de Base de Datos I"),
-    ("", "Pasantía", 20, "Extras", ""),
-]
-
-
 def plantilla_csv():
     salida = io.StringIO()
     escritor = csv.writer(salida, delimiter=";", lineterminator="\r\n")
     escritor.writerow(["semestre", "materia", "creditos", "categoria", "previas"])
-    escritor.writerows(PLANTILLA_FILAS)
     # BOM para que Excel abra bien las tildes
     return "\ufeff" + salida.getvalue()
 
 
 def plantilla_json():
     return json.dumps({
-        "carrera": "Ingeniería en TIC",
-        "valor_credito": 45.5,
-        "materias": [
-            {"semestre": int(s) if s else None, "nombre": n, "creditos": c, "categoria": cat,
-             "previas": [p.strip() for p in pre.split(";")] if pre else []}
-            for s, n, c, cat, pre in PLANTILLA_FILAS
-        ],
+        "carrera": "",
+        "valor_credito": None,
+        "materias": [],
     }, ensure_ascii=False, indent=2)

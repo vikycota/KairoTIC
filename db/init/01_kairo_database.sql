@@ -12,13 +12,7 @@ CREATE TABLE Carreras (
     Nombre                    VARCHAR(100)    NOT NULL,
     Valor_Credito             NUMERIC(10,2)   NOT NULL,
     Nota_Minima_Aprobacion    NUMERIC(4,2)    NOT NULL DEFAULT 6.00,
-    Propietario     VARCHAR(150)    NULL,
-    CONSTRAINT pk_carreras PRIMARY KEY (Nombre),
-    CONSTRAINT fk_carreras_propietario
-        FOREIGN KEY (Propietario)
-        REFERENCES Personas (Email)
-        ON UPDATE CASCADE
-        ON DELETE CASCADE
+    CONSTRAINT pk_carreras PRIMARY KEY (Nombre)
 );
 
 CREATE TABLE Semestres (

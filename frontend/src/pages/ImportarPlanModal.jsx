@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { apiFetch } from '../api'
+import { apiFetch, EVENTO_CARRERAS_ACTUALIZADAS } from '../api'
 import '../pagesCSS/ImportarPlan.css'
 
 async function leerJson(res) {
@@ -167,6 +167,7 @@ function ImportarPlanModal({ abierto, archivoInicial = null, onCerrar, onImporta
       if (res.ok) {
         const nombre = json.carrera
         limpiar()
+        window.dispatchEvent(new CustomEvent(EVENTO_CARRERAS_ACTUALIZADAS, { detail: { carrera: nombre } }))
         onImportado(nombre)
         return
       }

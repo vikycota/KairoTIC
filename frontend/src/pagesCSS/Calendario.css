@@ -116,7 +116,7 @@
 }
 
 /* Datos */
-.cal-datos { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-top: 26px; }
+.cal-datos { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; margin-top: 26px; }
 
 .cal-dato {
   padding: 14px 16px;
@@ -152,6 +152,7 @@
 /* Colores por tipo */
 .cal-tipo--clase { --c: #6d4fd6; }
 .cal-tipo--taller { --c: #2f9a8d; }
+.cal-tipo--bloque { --c: #d979a7; }
 .cal-tipo--personal { --c: #c24bc2; }
 
 .cal-filtros { display: flex; flex-wrap: wrap; gap: 8px; }
@@ -172,6 +173,7 @@
 
 .cal-filtro i { width: 10px; height: 10px; border-radius: 50%; background: #6d4fd6; }
 .cal-filtro--taller i { background: #2f9a8d; }
+.cal-filtro--bloque i { background: #d979a7; }
 .cal-filtro--personal i { background: #c24bc2; }
 .cal-filtro:hover { transform: translateY(-1px); border-color: var(--violeta-claro); }
 .cal-filtro--off { opacity: 0.5; }

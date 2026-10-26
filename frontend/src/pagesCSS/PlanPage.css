@@ -1,11 +1,13 @@
-.ingresar-horario-button, .seleccionar-materias-button, .planificar-horario-button, .agregar-bloque-button {
+.ingresar-horario-button, .seleccionar-materias-button, .planificar-horario-button, .seleccion-automatica-button, .agregar-bloque-button {
   display: flex;
   justify-content: flex-end;
 }
 
 .ingresar-horario-button,
 .seleccionar-materias-button,
+.seleccionar-talleres-button,
 .planificar-horario-button,
+.seleccion-automatica-button,
 .agregar-bloque-button {
   border: none;
   background: linear-gradient(270deg, #de6adeca, #200064a7);
@@ -537,6 +539,22 @@
 .materias-modal-cancelar { background: #f2effb; color: #514a68; }
 .materias-modal-aplicar { background: linear-gradient(270deg, #de6ade, #200064); color: #fff; }
 
+.bloque-manual-modal { width: min(560px, calc(100vw - 32px)); }
+.bloque-manual-form { display: grid; gap: 14px; }
+.bloque-manual-form label { display: grid; gap: 6px; color: #514a68; font-size: 13px; font-weight: 600; }
+.bloque-manual-form input,
+.bloque-manual-form select { width: 100%; min-width: 0; height: 40px; box-sizing: border-box; padding: 8px 10px; border: 1px solid #d9d2f5; border-radius: 9px; background: #fff; color: #302b42; font: 14px 'Inter', sans-serif; }
+.bloque-manual-form input:focus,
+.bloque-manual-form select:focus { border-color: #7c5cfc; box-shadow: 0 0 0 3px rgba(124, 92, 252, .14); outline: none; }
+.bloque-manual-horas { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.bloque-manual-ayuda,
+.bloque-manual-error { margin: 0; font-size: 12px; line-height: 1.5; }
+.bloque-manual-ayuda { color: #706b80; }
+.bloque-manual-error { color: #a61e32; }
+.bloques-manuales-resumen ul { gap: 8px 14px; list-style: none; padding-left: 0; }
+.bloques-manuales-resumen li { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
+.bloques-manuales-resumen li button { padding: 3px 8px; border: 1px solid #e6dff5; border-radius: 999px; background: #faf8ff; color: #6d5fb3; font: 600 11px 'Inter', sans-serif; cursor: pointer; }
+
 .plan-header-text {
     flex-direction: column;
   
@@ -871,7 +889,9 @@
 
 .ingresar-horario-button,
 .seleccionar-materias-button,
+.seleccionar-talleres-button,
 .planificar-horario-button,
+.seleccion-automatica-button,
 .agregar-bloque-button {
   display: inline-flex;
   align-items: center;
@@ -886,9 +906,12 @@
 
 .ingresar-horario-button { border-color: rgba(255, 255, 255, .42); background: rgba(255, 255, 255, .1); color: #fff; }
 .seleccionar-materias-button { background: linear-gradient(90deg, var(--plan-rosa), #f08af0); color: var(--plan-noche); }
+.seleccionar-talleres-button { background: #eee9ff; color: var(--plan-violeta); }
 .planificar-horario-button { background: #fff; color: var(--plan-violeta); }
+.seleccion-automatica-button { background: #ffe9f5; color: #7f2456; }
 .agregar-bloque-button { background: transparent; border-color: rgba(255, 255, 255, .35); color: #fff; }
 .planificar-buttons button:hover { transform: translateY(-2px); box-shadow: 0 8px 22px rgba(18, 0, 58, .2); }
+.planificar-buttons button:disabled { cursor: not-allowed; opacity: .55; transform: none; box-shadow: none; }
 .plan-page button:focus-visible,
 .plan-page select:focus-visible,
 .plan-page input:focus-visible { outline: 3px solid #c46bef; outline-offset: 2px; }
@@ -897,7 +920,8 @@
 .materias-resumen,
 .planificacion-alternativas,
 .planificacion-feedback,
-.plan-grid-shell {
+.plan-grid-shell,
+.plan-guardar-footer {
   width: min(1500px, calc(100% - 2 * clamp(20px, 4vw, 48px)));
   margin-right: auto;
   margin-left: auto;
@@ -929,7 +953,24 @@
   box-shadow: 0 8px 24px rgba(32, 0, 100, .05);
 }
 
+.talleres-disponibles-lista { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
+.talleres-disponibles-lista li { padding: 12px; border: 1px solid #e8e2f4; border-radius: 12px; background: #fcfbfe; }
+.talleres-disponibles-lista label { display: flex; align-items: flex-start; gap: 10px; cursor: pointer; }
+.taller-disponible-detalle { display: grid; gap: 5px; color: #392477; }
+.taller-disponible-detalle small { color: #706b80; line-height: 1.5; }
+.talleres-resumen { margin-top: 0; }
+
 .planificacion-alternativas { margin-top: 0; }
+.seleccion-automatica-encabezado { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; margin-bottom: 10px; }
+.seleccion-automatica-encabezado h2 { margin-bottom: 4px; }
+.seleccion-automatica-encabezado p,
+.seleccion-automatica-mensaje { margin: 0; color: #706b80; line-height: 1.5; }
+.seleccion-automatica-encabezado button,
+.seleccion-automatica-aplicar { flex: 0 0 auto; padding: 8px 12px; border: 0; border-radius: 9px; background: #eee9ff; color: var(--plan-violeta); font: 600 12px 'Inter', sans-serif; cursor: pointer; }
+.seleccion-automatica-opciones > ol { max-height: none; }
+.seleccion-automatica-opciones > ol > li > ul li { display: grid; gap: 3px; }
+.seleccion-automatica-horarios { color: #706b80; font-size: 11px; }
+.seleccion-automatica-aplicar { margin-top: 10px; background: linear-gradient(90deg, var(--plan-violeta), #8b65db); color: #fff; }
 .planificacion-feedback { margin-top: 0; }
 
 .plan-grid-shell {
@@ -939,6 +980,11 @@
   background: #fff;
   box-shadow: 0 10px 30px rgba(32, 0, 100, .08);
 }
+
+.plan-guardar-footer { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-top: 12px; }
+.plan-guardar-footer p { margin: 0; color: #514a68; font-size: 13px; }
+.plan-guardar-footer button { min-height: 44px; padding: 10px 18px; border: 0; border-radius: 12px; background: linear-gradient(90deg, var(--plan-violeta), #8b65db); color: #fff; font: 600 13px 'Inter', sans-serif; cursor: pointer; }
+.plan-guardar-footer button:disabled { cursor: not-allowed; opacity: .5; }
 
 .plan-grid-wrapper { max-height: min(68vh, 780px); }
 .plan-grid { grid-template-columns: 68px repeat(7, minmax(110px, 1fr)); }
@@ -951,6 +997,8 @@
 .plan-slot:hover { background: #faf8ff; }
 .plan-slot-mas { color: #a69bc9; }
 .plan-event { border-color: #d9d0f7; background: #eee9ff; color: var(--plan-violeta); }
+.plan-event--taller { border-color: #8dd3c7; background: #e8f6f4; color: #11694a; }
+.plan-event--manual { border-color: #e8a6c8; background: #fff0f7; color: #8b285c; }
 .plan-event--conflict { border-color: #a61e32; background: #c43d51; color: #fff; }
 
 @media (max-width: 720px) {
@@ -961,8 +1009,20 @@
   .materias-resumen,
   .planificacion-alternativas,
   .planificacion-feedback,
-  .plan-grid-shell { width: calc(100% - 32px); }
+  .plan-grid-shell,
+  .plan-guardar-footer { width: calc(100% - 32px); }
   .plan-grid-wrapper { max-height: 62vh; }
+}
+
+@media (max-width: 480px) {
+  .plan-guardar-footer { align-items: stretch; flex-direction: column; }
+  .plan-guardar-footer button { width: 100%; }
+}
+
+@media (max-width: 480px) {
+  .bloque-manual-horas { grid-template-columns: 1fr; }
+  .bloque-manual-modal { max-height: calc(100vh - 32px); }
+  .seleccion-automatica-encabezado { flex-direction: column; }
 }
 
 @media (prefers-reduced-motion: reduce) {

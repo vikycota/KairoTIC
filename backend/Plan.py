@@ -1,6 +1,7 @@
-from flask import Blueprint, Response, jsonify, request
+from flask import Blueprint, Response, g, jsonify, request
 from werkzeug.exceptions import HTTPException
 
+from auth import requiere_login
 from conexion import obtener_conexion
 from plan_parser import (
     PlanError,
@@ -87,7 +88,7 @@ def numero_desde_periodo(nombre, anio):
 # CONSULTAS AUXILIARES
 # ============================================================
 
-def materias_existentes(cur):
+def materias_existentes(cur, email):
     """
     Devuelve las materias existentes de la BD como:
 
@@ -99,11 +100,13 @@ def materias_existentes(cur):
 
     cur.execute(
         """
-        SELECT
-            Nombre,
-            Cantidad_de_Creditos
-        FROM Materias
-        """
+        SELECT DISTINCT m.Nombre, m.Cantidad_de_Creditos
+        FROM Materias m
+        JOIN Tiene t ON t.Materias_Nombre = m.Nombre
+        JOIN Pertenecen_A pa ON pa.Carreras_Nombre = t.Carreras_Nombre
+        WHERE pa.Email = %s
+        """,
+        (email,),
     )
 
     return {
@@ -112,7 +115,7 @@ def materias_existentes(cur):
     }
 
 
-def semestres_existentes(cur):
+def semestres_existentes(cur, email):
     """
     Devuelve en qué semestres está cada materia.
 
@@ -126,12 +129,13 @@ def semestres_existentes(cur):
 
     cur.execute(
         """
-        SELECT
-            Materias_Nombre,
-            Semestres_Nombre,
-            Semestres_Anio
-        FROM Se_Organiza_En
-        """
+        SELECT DISTINCT so.Materias_Nombre, so.Semestres_Nombre, so.Semestres_Anio
+        FROM Se_Organiza_En so
+        JOIN Tiene t ON t.Materias_Nombre = so.Materias_Nombre
+        JOIN Pertenecen_A pa ON pa.Carreras_Nombre = t.Carreras_Nombre
+        WHERE pa.Email = %s
+        """,
+        (email,),
     )
 
     resultado = {}
@@ -155,7 +159,7 @@ def semestres_existentes(cur):
 # PROCESAMIENTO DEL ARCHIVO SUBIDO
 # ============================================================
 
-def procesar_subida(cur):
+def procesar_subida(cur, email):
     """
     Lee el archivo enviado mediante multipart/form-data.
 
@@ -217,8 +221,8 @@ def procesar_subida(cur):
     resultado = validar_plan(
         raw,
         carrera=carrera,
-        existentes=materias_existentes(cur),
-        semestres_existentes=semestres_existentes(cur),
+        existentes=materias_existentes(cur, email),
+        semestres_existentes=semestres_existentes(cur, email),
     )
 
     return resultado, None
@@ -231,50 +235,50 @@ def procesar_subida(cur):
 def guardar_carrera(
     cur,
     carrera,
-    valor_credito
+    valor_credito,
+    nota_minima_aprobacion=None
 ):
-    """
-    Crea la carrera si no existe.
+    """Guarda la carrera compartida, preservando campos omitidos si ya existe."""
 
-    Si el archivo trae valor_credito,
-    también lo actualiza.
-    """
+    valor_nuevo = 0 if valor_credito is None else valor_credito
 
-    if valor_credito is not None:
-
-        cur.execute(
-            """
-            INSERT INTO Carreras (
-                Nombre,
-                Valor_Credito
-            )
+    if nota_minima_aprobacion is None:
+        sql = """
+            INSERT INTO Carreras (Nombre, Valor_Credito)
             VALUES (%s, %s)
-
             ON CONFLICT (Nombre)
-            DO UPDATE SET
-                Valor_Credito =
-                    EXCLUDED.Valor_Credito
-            """,
-            (
-                carrera,
-                valor_credito
-            ),
+        """
+        sql += (
+            "DO UPDATE SET Valor_Credito = EXCLUDED.Valor_Credito"
+            if valor_credito is not None
+            else "DO NOTHING"
         )
-
+        cur.execute(sql, (carrera, valor_nuevo))
         return
 
+    sql = """
+        INSERT INTO Carreras (Nombre, Valor_Credito, Nota_Minima_Aprobacion)
+        VALUES (%s, %s, %s)
+        ON CONFLICT (Nombre)
+        DO UPDATE SET Nota_Minima_Aprobacion = EXCLUDED.Nota_Minima_Aprobacion
+    """
+    if valor_credito is not None:
+        sql = sql.replace(
+            "DO UPDATE SET Nota_Minima_Aprobacion = EXCLUDED.Nota_Minima_Aprobacion",
+            "DO UPDATE SET Valor_Credito = EXCLUDED.Valor_Credito, "
+            "Nota_Minima_Aprobacion = EXCLUDED.Nota_Minima_Aprobacion",
+        )
+    cur.execute(sql, (carrera, valor_nuevo, nota_minima_aprobacion))
+
+
+def asociar_carrera_a_persona(cur, email, carrera):
     cur.execute(
         """
-        INSERT INTO Carreras (
-            Nombre,
-            Valor_Credito
-        )
-        VALUES (%s, 0)
-
-        ON CONFLICT (Nombre)
-        DO NOTHING
+        INSERT INTO Pertenecen_A (Email, Carreras_Nombre, Fecha_Inscripcion)
+        VALUES (%s, %s, CURRENT_DATE)
+        ON CONFLICT (Email, Carreras_Nombre) DO NOTHING
         """,
-        (carrera,),
+        (email, carrera),
     )
 
 
@@ -700,6 +704,7 @@ def descargar_plantilla_json():
     "/plan/preview",
     methods=["POST"]
 )
+@requiere_login
 def preview():
 
     conn = None
@@ -711,7 +716,7 @@ def preview():
         with conn.cursor() as cur:
 
             resultado, error = (
-                procesar_subida(cur)
+                procesar_subida(cur, g.email)
             )
 
         if error:
@@ -750,6 +755,7 @@ def preview():
     "/plan/importar",
     methods=["POST"]
 )
+@requiere_login
 def importar():
 
     conn = None
@@ -761,7 +767,7 @@ def importar():
         with conn.cursor() as cur:
 
             resultado, error = (
-                procesar_subida(cur)
+                procesar_subida(cur, g.email)
             )
 
             if error:
@@ -786,6 +792,9 @@ def importar():
             valor_credito = resultado.get(
                 "valor_credito"
             )
+            nota_minima_aprobacion = resultado.get(
+                "nota_minima_aprobacion"
+            )
 
 
             # ----------------------------------------
@@ -795,8 +804,11 @@ def importar():
             guardar_carrera(
                 cur,
                 carrera,
-                valor_credito
+                valor_credito,
+                nota_minima_aprobacion
             )
+
+            asociar_carrera_a_persona(cur, g.email, carrera)
 
 
             # ----------------------------------------
@@ -902,6 +914,7 @@ def importar():
     "/carreras",
     methods=["GET"]
 )
+@requiere_login
 def listar_carreras():
 
     conn = None
@@ -939,6 +952,13 @@ def listar_carreras():
                     ON m.Nombre =
                        t.Materias_Nombre
 
+                WHERE EXISTS (
+                    SELECT 1
+                    FROM Pertenecen_A pa
+                    WHERE pa.Carreras_Nombre = c.Nombre
+                      AND pa.Email = %s
+                )
+
                 GROUP BY
                     c.Nombre,
                     c.Valor_Credito
@@ -950,7 +970,8 @@ def listar_carreras():
 
                 ORDER BY
                     c.Nombre
-                """
+                """,
+                (g.email,),
             )
 
             filas = cur.fetchall()
@@ -1010,6 +1031,7 @@ def listar_carreras():
     "/plan",
     methods=["GET"]
 )
+@requiere_login
 def obtener_plan():
 
     carrera = (
@@ -1044,8 +1066,14 @@ def obtener_plan():
                 FROM Carreras
 
                 WHERE Nombre = %s
+                  AND EXISTS (
+                    SELECT 1
+                    FROM Pertenecen_A pa
+                    WHERE pa.Carreras_Nombre = Carreras.Nombre
+                      AND pa.Email = %s
+                  )
                 """,
-                (carrera,),
+                (carrera, g.email),
             )
 
             fila_carrera = cur.fetchone()

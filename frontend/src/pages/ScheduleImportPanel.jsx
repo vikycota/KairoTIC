@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import '../pagesCSS/ScheduleImportPanel.css'
+import { apiFetch, EVENTO_CARRERAS_ACTUALIZADAS } from '../api'
 
 async function leerJson(res) {
   try { return await res.json() } catch { return {} }
@@ -10,12 +11,14 @@ function ScheduleImportPanel({
   carrerasDisponibles,
   carreraInicial = '',
   anioInicial = new Date().getFullYear(),
-  semestreInicial = '1',
+  semestreInicial = String(new Date().getMonth() >= 6 ? 2 : 1),
   consultarHorariosExistentes = true,
+  onSchedulesLoaded,
 }) {
   const [carrerasRemotas, setCarrerasRemotas] = useState([])
   const carreras = carrerasDisponibles ?? carrerasRemotas
   const [carrera, setCarrera] = useState(carreraInicial)
+  const carreraActiva = carrera || carreras[0]?.nombre || ''
   const [anio, setAnio] = useState(String(anioInicial))
   const [semestre, setSemestre] = useState(String(semestreInicial))
   const [archivo, setArchivo] = useState(null)
@@ -28,26 +31,45 @@ function ScheduleImportPanel({
   const [cargando, setCargando] = useState(false)
   const [errorCarga, setErrorCarga] = useState('')
 
-  useEffect(() => {
-    if (carrerasDisponibles) return undefined
-    fetch('/api/carreras')
-      .then(async (res) => {
-        const json = await leerJson(res)
-        if (!res.ok) throw new Error(json.error || 'No se pudieron cargar las carreras.')
-        setCarrerasRemotas(json.carreras ?? [])
-      })
-      .catch((err) => setError(err.message || 'No se pudieron cargar las carreras.'))
+  const actualizarCarreras = useCallback(async (carreraImportada = '') => {
+    if (carrerasDisponibles) return
+    try {
+      const res = await apiFetch('/api/carreras', { cache: 'no-store' })
+      const json = await leerJson(res)
+      if (!res.ok) throw new Error(json.error || 'No se pudieron cargar las carreras.')
+      let disponibles = json.carreras ?? []
+      if (carreraImportada && !disponibles.some((item) => item.nombre === carreraImportada)) {
+        disponibles = [...disponibles, { nombre: carreraImportada }].sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'))
+      }
+      setCarrerasRemotas(disponibles)
+      if (carreraImportada) setCarrera(carreraImportada)
+      setError('')
+    } catch (err) {
+      setError(err.message || 'No se pudieron cargar las carreras.')
+    }
   }, [carrerasDisponibles])
 
+  useEffect(() => {
+    if (carrerasDisponibles) return undefined
+    const inicioCarga = window.setTimeout(() => actualizarCarreras(), 0)
+    const alActualizar = (event) => actualizarCarreras(event.detail?.carrera ?? '')
+    window.addEventListener(EVENTO_CARRERAS_ACTUALIZADAS, alActualizar)
+    return () => {
+      window.clearTimeout(inicioCarga)
+      window.removeEventListener(EVENTO_CARRERAS_ACTUALIZADAS, alActualizar)
+    }
+  }, [actualizarCarreras, carrerasDisponibles])
+
   const cargarHorarios = useCallback(async () => {
-    if (!carrera || !anio || !semestre) { setBloques([]); return }
+    if (!carreraActiva || !anio || !semestre) { setBloques([]); return }
     setCargando(true)
     try {
-      const query = new URLSearchParams({ carrera, anio_lectivo: anio, semestre_lectivo: semestre })
-      const res = await fetch(`/api/horarios?${query}`)
+      const query = new URLSearchParams({ carrera: carreraActiva, anio_lectivo: anio, semestre_lectivo: semestre })
+      const res = await apiFetch(`/api/horarios?${query}`)
       const json = await leerJson(res)
       if (!res.ok) throw new Error(json.error || 'No se pudieron cargar los horarios.')
       setBloques(json.bloques ?? [])
+      onSchedulesLoaded?.(json)
       setErrorCarga('')
     } catch (err) {
       setBloques([])
@@ -55,7 +77,7 @@ function ScheduleImportPanel({
     } finally {
       setCargando(false)
     }
-  }, [carrera, anio, semestre])
+  }, [carreraActiva, anio, semestre, onSchedulesLoaded])
 
   useEffect(() => {
     if (!consultarHorariosExistentes) return undefined
@@ -66,7 +88,7 @@ function ScheduleImportPanel({
   function formulario() {
     const data = new FormData()
     data.append('archivo', archivo)
-    data.append('carrera', carrera)
+    data.append('carrera', carreraActiva)
     data.append('anio_lectivo', anio)
     data.append('semestre_lectivo', semestre)
     return data
@@ -76,11 +98,11 @@ function ScheduleImportPanel({
     e.preventDefault()
     setError('')
     setMensaje('')
-    if (!carrera) { setError('No seleccionaste una carrera.'); return }
+    if (!carreraActiva) { setError('No seleccionaste una carrera.'); return }
     if (!archivo) { setError('Elegí un archivo .csv, .xlsx o .json.'); return }
     setAnalizando(true)
     try {
-      const res = await fetch('/api/horarios/preview', { method: 'POST', body: formulario() })
+      const res = await apiFetch('/api/horarios/preview', { method: 'POST', body: formulario() })
       const json = await leerJson(res)
       if (!res.ok) throw new Error(json.error || json.errores?.join(' ') || 'No se pudo analizar el archivo.')
       setPreview(json)
@@ -94,7 +116,7 @@ function ScheduleImportPanel({
     setGuardando(true)
     setError('')
     try {
-      const res = await fetch('/api/horarios/importar', { method: 'POST', body: formulario() })
+      const res = await apiFetch('/api/horarios/importar', { method: 'POST', body: formulario() })
       const json = await leerJson(res)
       if (!res.ok) {
         if (res.status === 422) setPreview(json)
@@ -122,7 +144,7 @@ function ScheduleImportPanel({
       <form className="schedule-import-form" onSubmit={analizar}>
         <label>
           <span>Carrera</span>
-          <select value={carrera} onChange={(e) => { setCarrera(e.target.value); setPreview(null) }}>
+          <select value={carreraActiva} onChange={(e) => { setCarrera(e.target.value); setPreview(null) }}>
             <option value="">Seleccionar carrera</option>
             {carreras.map((item) => <option key={item.nombre} value={item.nombre}>{item.nombre}</option>)}
           </select>
@@ -167,7 +189,7 @@ function ScheduleImportPanel({
       </section>}
 
       {consultarHorariosExistentes && <div className="schedule-current">
-        <h3>Horarios guardados · {carrera || 'Seleccioná una carrera'} · {anio} · Semestre {semestre}</h3>
+        <h3>Horarios guardados · {carreraActiva || 'Seleccioná una carrera'} · {anio} · Semestre {semestre}</h3>
         {errorCarga && <p className="schedule-message schedule-error" role="alert">{errorCarga}</p>}
         {cargando ? <p>Cargando horarios…</p> : bloques.length === 0 ? <p>No hay horarios guardados para este período.</p> : (
           <div className="schedule-table-wrap"><table className="schedule-table"><thead><tr><th>Materia</th><th>Grupo</th><th>Día</th><th>Horario</th><th>Tipo</th><th>Docente</th><th>Opcional</th></tr></thead><tbody>

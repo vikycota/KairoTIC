@@ -52,10 +52,14 @@ def _validar_materia(valor):
     return valor.strip()
 
 
-def _carrera_propia(cur, carrera, email):
-    """True si la carrera existe y es de este usuario."""
+def _carrera_existe(cur, carrera, email):
+    """True si la carrera está asociada a la persona de la sesión."""
     cur.execute(
-        "SELECT 1 FROM Carreras WHERE Nombre = %s AND Propietario = %s",
+        """
+        SELECT 1
+        FROM Pertenecen_A
+        WHERE Carreras_Nombre = %s AND Email = %s
+        """,
         (carrera, email),
     )
     return cur.fetchone() is not None
@@ -139,7 +143,7 @@ def agregar_examen():
             return jsonify({"error": "La materia no existe."}), 404
 
         if carrera:
-            if not _carrera_propia(cur, carrera, email):
+            if not _carrera_existe(cur, carrera, email):
                 cur.close()
                 return jsonify({"error": "La carrera no existe."}), 404
             cur.execute(
@@ -207,7 +211,7 @@ def listar_examenes():
         union = ""
         parametros = [email]
         if carrera:
-            if not _carrera_propia(cur, carrera, email):
+            if not _carrera_existe(cur, carrera, email):
                 cur.close()
                 return jsonify({"error": "La carrera no existe."}), 404
             union = "JOIN Tiene t ON t.Materias_Nombre = h.Materias_Nombre AND t.Carreras_Nombre = %s"
@@ -271,10 +275,12 @@ def resumen_progreso():
                    COALESCE(SUM(CASE WHEN a.nota IS NOT NULL THEN m.Cantidad_de_Creditos END), 0),
                    AVG(a.nota)
             FROM Carreras c
+            JOIN Pertenecen_A pa
+              ON pa.Carreras_Nombre = c.Nombre
+             AND pa.Email = %s
             JOIN Tiene t ON t.Carreras_Nombre = c.Nombre
             JOIN Materias m ON m.Nombre = t.Materias_Nombre
             LEFT JOIN aprobadas a ON a.Materias_Nombre = m.Nombre
-            WHERE c.Propietario = %s
             GROUP BY c.Nombre
             ORDER BY c.Nombre
             """,

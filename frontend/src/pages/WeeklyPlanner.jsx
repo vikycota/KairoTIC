@@ -8,6 +8,7 @@ const PX_HORA = 56
 const TIPOS = {
   clase: { etiqueta: 'Clases', singular: 'Clase' },
   taller: { etiqueta: 'Talleres', singular: 'Taller' },
+  bloque: { etiqueta: 'Bloques', singular: 'Bloque personal' },
   personal: { etiqueta: 'Personal', singular: 'Evento personal' },
 }
 
@@ -19,6 +20,46 @@ const aMin = (hhmm) => {
 }
 
 const aHHMM = (min) => `${String(Math.floor(min / 60)).padStart(2, '0')}:${String(min % 60).padStart(2, '0')}`
+
+function bloqueOcurreEnFecha(bloque, fecha) {
+  const inicio = new Date(`${bloque.fecha_inicio || '1900-01-01'}T00:00:00`)
+  const fechaActual = new Date(fecha)
+  inicio.setHours(0, 0, 0, 0)
+  fechaActual.setHours(0, 0, 0, 0)
+  if (fechaActual < inicio) return false
+  if (bloque.repeticion === 'diaria') return true
+
+  const diaObjetivo = DIAS.indexOf(bloque.dia)
+  if (diaObjetivo < 0 || (fechaActual.getDay() + 6) % 7 !== diaObjetivo) return false
+  if (bloque.repeticion === 'quincenal') {
+    const lunesInicio = new Date(inicio)
+    lunesInicio.setDate(inicio.getDate() - (inicio.getDay() + 6) % 7)
+    const lunesActual = new Date(fechaActual)
+    lunesActual.setDate(fechaActual.getDate() - (fechaActual.getDay() + 6) % 7)
+    const semanas = Math.round((Date.UTC(lunesActual.getFullYear(), lunesActual.getMonth(), lunesActual.getDate())
+      - Date.UTC(lunesInicio.getFullYear(), lunesInicio.getMonth(), lunesInicio.getDate())) / 604800000)
+    return semanas % 2 === 0
+  }
+  if (bloque.repeticion === 'mensual' || bloque.repeticion === 'alternado') {
+    const meses = (fechaActual.getFullYear() - inicio.getFullYear()) * 12 + fechaActual.getMonth() - inicio.getMonth()
+    if (bloque.repeticion === 'alternado' && meses % 2 !== 0) return false
+    const primeroDelMes = new Date(fechaActual.getFullYear(), fechaActual.getMonth(), 1)
+    const diaPrimero = (primeroDelMes.getDay() + 6) % 7
+    const primerDiaElegido = 1 + (diaObjetivo - diaPrimero + 7) % 7
+    return fechaActual.getDate() === primerDiaElegido
+  }
+  return true
+}
+
+function etiquetaRepeticion(repeticion) {
+  return ({
+    diaria: 'Todos los días',
+    semanal: 'Cada semana',
+    quincenal: 'Cada dos semanas',
+    mensual: 'Una vez al mes',
+    alternado: 'Mes sí, mes no',
+  })[repeticion] ?? 'Bloque recurrente'
+}
 
 function aISO(fecha) {
   const mes = String(fecha.getMonth() + 1).padStart(2, '0')
@@ -104,14 +145,29 @@ function WeeklyPlanner({ emailUsuario, onIr }) {
   const claveEventos = `kairo-eventos:${emailUsuario}`
   const [semana, setSemana] = useState(0)
   const [personales, setPersonales] = useState(() => leerStorage(claveEventos)?.eventos ?? [])
-  const [filtros, setFiltros] = useState({ clase: true, taller: true, personal: true })
+  const [filtros, setFiltros] = useState({ clase: true, taller: true, bloque: true, personal: true })
   const [panel, setPanel] = useState(null)       // { tipo: 'ver', evento } | { tipo: 'form', borrador }
   const [error, setError] = useState('')
   const [ahora, setAhora] = useState(() => new Date())
 
-  // Lo que se cargó en Inicio: clases y talleres que se repiten todas las semanas.
-  const horarios = useMemo(() => leerStorage(`kairo-horarios:${emailUsuario}`)?.bloques ?? [], [emailUsuario])
-  const talleres = useMemo(() => leerStorage(`kairo-talleres:${emailUsuario}`)?.bloques ?? [], [emailUsuario])
+  // El último plan guardado se muestra en el calendario; si no existe, se usan las cargas.
+  const planGuardado = useMemo(() => {
+    const guardado = leerStorage(`kairo-planificaciones:${emailUsuario}`)
+    return guardado?.por_periodo?.[guardado.activo] ?? null
+  }, [emailUsuario])
+  const horarios = useMemo(() => (
+    planGuardado
+      ? planGuardado.bloques.filter((bloque) => bloque.tipo === 'clase')
+      : leerStorage(`kairo-horarios:${emailUsuario}`)?.bloques ?? []
+  ), [emailUsuario, planGuardado])
+  const talleres = useMemo(() => (
+    planGuardado
+      ? planGuardado.bloques.filter((bloque) => bloque.tipo === 'taller')
+      : leerStorage(`kairo-talleres:${emailUsuario}`)?.bloques ?? []
+  ), [emailUsuario, planGuardado])
+  const bloques = useMemo(() => (
+    planGuardado?.bloques?.filter((bloque) => bloque.tipo === 'bloque') ?? []
+  ), [planGuardado])
 
   useEffect(() => {
     const t = setInterval(() => setAhora(new Date()), 60000)
@@ -135,10 +191,14 @@ function WeeklyPlanner({ emailUsuario, onIr }) {
       const iso = aISO(fechas[i])
       const lista = [
         ...horarios.filter((b) => b.dia === dia).map((b, k) => ({
-          id: `c-${dia}-${k}`, tipo: 'clase', titulo: b.nombre, ini: aMin(b.inicio), fin: aMin(b.fin), salon: b.salon, extra: b.extra, dia,
+          id: `c-${dia}-${k}`, tipo: 'clase', titulo: b.nombre, ini: aMin(b.inicio), fin: aMin(b.fin), salon: b.salon, extra: b.extra, grupo: b.grupo, dia,
         })),
         ...talleres.filter((b) => b.dia === dia).map((b, k) => ({
           id: `t-${dia}-${k}`, tipo: 'taller', titulo: b.nombre, ini: aMin(b.inicio), fin: aMin(b.fin), salon: b.salon, extra: b.extra, dia,
+        })),
+        ...bloques.filter((bloque) => bloqueOcurreEnFecha(bloque, fechas[i])).map((bloque, k) => ({
+          id: `b-${dia}-${bloque.id ?? k}`, tipo: 'bloque', titulo: bloque.nombre, ini: aMin(bloque.inicio), fin: aMin(bloque.fin), dia,
+          repeticion: bloque.repeticion, fecha_inicio: bloque.fecha_inicio,
         })),
         ...personales.filter((p) => p.fecha === iso).map((p) => ({
           id: p.id, tipo: 'personal', titulo: p.titulo, ini: aMin(p.inicio), fin: aMin(p.fin), fecha: p.fecha,
@@ -146,7 +206,7 @@ function WeeklyPlanner({ emailUsuario, onIr }) {
       ].filter((e) => filtros[e.tipo])
       return distribuir(lista)
     })
-  }, [fechas, horarios, talleres, personales, filtros])
+  }, [fechas, horarios, talleres, bloques, personales, filtros])
 
   const todos = porDia.flat()
   const horaInicio = Math.max(0, Math.min(7, ...todos.map((e) => Math.floor(e.ini / 60))))
@@ -156,7 +216,7 @@ function WeeklyPlanner({ emailUsuario, onIr }) {
 
   const cuenta = (tipo) => todos.filter((e) => e.tipo === tipo).length
   const horasOcupadas = Math.round(todos.reduce((acc, e) => acc + (e.fin - e.ini), 0) / 60)
-  const sinCargas = horarios.length === 0 && talleres.length === 0
+  const sinCargas = horarios.length === 0 && talleres.length === 0 && bloques.length === 0
 
   const minutosAhora = ahora.getHours() * 60 + ahora.getMinutes()
   const lineaAhora = (minutosAhora / 60 - horaInicio) * PX_HORA
@@ -224,7 +284,9 @@ function WeeklyPlanner({ emailUsuario, onIr }) {
           <div>
             <span className="cal-etiqueta">Calendario</span>
             <h1>{formatearRango(lunes)}</h1>
-            <p>Tu semana de un vistazo: clases, talleres y tus propios eventos.</p>
+          <p>{planGuardado
+            ? `Plan guardado · ${planGuardado.carrera} · ${planGuardado.anio_lectivo} · Semestre ${planGuardado.semestre_lectivo}. Clases, talleres y bloques.`
+            : 'Tu semana de un vistazo: clases, talleres y tus propios eventos.'}</p>
           </div>
 
           <div className="cal-acciones">
@@ -242,6 +304,7 @@ function WeeklyPlanner({ emailUsuario, onIr }) {
         <div className="cal-datos">
           <Dato valor={cuenta('clase')} etiqueta="clases" />
           <Dato valor={cuenta('taller')} etiqueta="talleres" />
+          <Dato valor={cuenta('bloque')} etiqueta="bloques" />
           <Dato valor={cuenta('personal')} etiqueta="eventos personales" />
           <Dato valor={horasOcupadas} etiqueta="horas ocupadas" />
         </div>
@@ -279,9 +342,12 @@ function WeeklyPlanner({ emailUsuario, onIr }) {
               <p>
                 {DIAS_LARGOS[DIAS.indexOf(panel.evento.dia)]} · {aHHMM(panel.evento.ini)} – {aHHMM(panel.evento.fin)}
                 {panel.evento.salon ? ` · Salón ${panel.evento.salon}` : ''}
+                {panel.evento.grupo ? ` · Grupo ${panel.evento.grupo}` : ''}
                 {panel.evento.extra ? ` · ${panel.evento.tipo === 'clase' ? `Docente: ${panel.evento.extra}` : `${panel.evento.extra} cupos`}` : ''}
               </p>
-              <small>Viene de los horarios que cargaste en Cargas y se repite todas las semanas.</small>
+              <small>{panel.evento.tipo === 'bloque'
+                ? `${etiquetaRepeticion(panel.evento.repeticion)}${panel.evento.fecha_inicio ? ` desde ${panel.evento.fecha_inicio}` : ''}.`
+                : planGuardado ? 'Viene del semestre que guardaste desde Planificar semestre.' : 'Viene de los horarios que cargaste en Cargas y se repite todas las semanas.'}</small>
             </div>
             <button type="button" className="cal-cerrar" onClick={() => setPanel(null)} aria-label="Cerrar">×</button>
           </aside>
