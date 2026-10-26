@@ -149,7 +149,8 @@ def guardar_presupuesto():
 
         if costo_credito is not None:
             cur.execute(
-                "UPDATE Carreras SET Valor_Credito = %s WHERE Nombre = %s AND Propietario = %s",
+                """UPDATE Carreras SET Valor_Credito = %s WHERE Nombre = %s
+                AND EXISTS (SELECT 1 FROM Pertenecen_A pa WHERE pa.Carreras_Nombre = Carreras.Nombre AND pa.Email = %s)""",
                 (costo_credito, carrera, g.email),
             )
             if cur.rowcount == 0:
@@ -303,7 +304,9 @@ def costo_semestre():
         cur = conn.cursor()
 
         cur.execute(
-            "SELECT Valor_Credito FROM Carreras WHERE Nombre = %s AND Propietario = %s",
+            """SELECT c.Valor_Credito FROM Carreras c
+            JOIN Pertenecen_A pa ON pa.Carreras_Nombre = c.Nombre
+            WHERE c.Nombre = %s AND pa.Email = %s""",
             (carrera, g.email),
         )
         fila = cur.fetchone()
