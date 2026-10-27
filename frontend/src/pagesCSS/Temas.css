@@ -401,3 +401,15 @@
 :root[data-tema="oscuro"][data-degradado="rojo-naranja"] .plan-page { --plan-texto: #eeeaf7; --plan-suave: #b8b1ca; }
 :root[data-tema="oscuro"][data-degradado="azul-verde"] :is(.config-card h2, .config-seccion-etiqueta, .sidebar-usuario-datos strong, .pg-dato strong, .pg-titulo, .pg-semestre header strong, .pe-sem-titulo strong, .pe-extra-cab strong, .pe-cat strong, .pe-detalle h2, .cal-panel h2, .cal-dia-cab strong, .plan-day-nombre, .plan-periodo-selector label, .taller-disponible-detalle) { color: #13a985; }
 :root[data-tema="oscuro"][data-degradado="rojo-naranja"] :is(.config-card h2, .config-seccion-etiqueta, .sidebar-usuario-datos strong, .pg-dato strong, .pg-titulo, .pg-semestre header strong, .pe-sem-titulo strong, .pe-extra-cab strong, .pe-cat strong, .pe-detalle h2, .cal-panel h2, .cal-dia-cab strong, .plan-day-nombre, .plan-periodo-selector label, .taller-disponible-detalle) { color: #f28a24; }
+
+/* Ingreso, registro y portada conservan la presentación original. */
+.auth,
+.land { color-scheme: light; }
+:root[data-degradado="azul-verde"] .land-hero,
+:root[data-degradado="rojo-naranja"] .land-hero { background: linear-gradient(160deg, #12003a 0%, #200064 70%, #3a0a7a 100%); }
+:root[data-degradado="azul-verde"] .land-btn--rosa,
+:root[data-degradado="rojo-naranja"] .land-btn--rosa { background: linear-gradient(90deg, #de6ade, #f08af0); color: #12003a; }
+:root[data-degradado="azul-verde"] :is(.login-page, .register-page) { background: linear-gradient(270deg, #de6ade, #200064d0); }
+:root[data-degradado="rojo-naranja"] :is(.login-page, .register-page) { background: linear-gradient(270deg, #de6ade, #200064d0); }
+:root[data-degradado="azul-verde"] :is(.login-button, .register-button),
+:root[data-degradado="rojo-naranja"] :is(.login-button, .register-button) { background: linear-gradient(270deg, #de6ade, #200064d8); }
