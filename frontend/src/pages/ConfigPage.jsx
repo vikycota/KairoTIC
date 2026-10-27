@@ -9,7 +9,7 @@ function iniciales(nombre) {
     .toUpperCase()
 }
 
-function ConfigPage({ usuario = { nombre: 'Viky', email: 'viky@correo.um.edu.uy' }, onGuardar }) {
+function ConfigPage({ usuario = { nombre: 'Viky', email: 'viky@correo.um.edu.uy' }, onGuardar, tema = 'claro', degradado = 'original', onCambiarTema, onCambiarDegradado }) {
   const [costoCredito, setCostoCredito] = useState('')
   const [beca, setBeca] = useState('')
   const [presupuesto, setPresupuesto] = useState('')
@@ -39,6 +39,49 @@ function ConfigPage({ usuario = { nombre: 'Viky', email: 'viky@correo.um.edu.uy'
       </header>
 
       <div className="config-contenido">
+        <section className="config-card config-apariencia" aria-labelledby="config-apariencia-titulo">
+          <div className="config-seccion-cabecera">
+            <div>
+              <span className="config-seccion-etiqueta">Personalización</span>
+              <h2 id="config-apariencia-titulo">Apariencia</h2>
+            </div>
+            <p>Elegí cómo se ve Kairo. Tus preferencias quedan guardadas en este dispositivo.</p>
+          </div>
+
+          <fieldset className="config-opciones">
+            <legend>Modo de color</legend>
+            <label className={`config-opcion ${tema === 'claro' ? 'config-opcion--activa' : ''}`}>
+              <input type="radio" name="tema" value="claro" checked={tema === 'claro'} onChange={() => onCambiarTema?.('claro')} />
+              <span className="config-opcion-muestra config-muestra-clara" aria-hidden="true" />
+              <span><strong>Claro</strong><small>Fondos claros y texto oscuro</small></span>
+            </label>
+            <label className={`config-opcion ${tema === 'oscuro' ? 'config-opcion--activa' : ''}`}>
+              <input type="radio" name="tema" value="oscuro" checked={tema === 'oscuro'} onChange={() => onCambiarTema?.('oscuro')} />
+              <span className="config-opcion-muestra config-muestra-oscura" aria-hidden="true" />
+              <span><strong>Oscuro</strong><small>Fondos oscuros y texto claro</small></span>
+            </label>
+          </fieldset>
+
+          <fieldset className="config-opciones config-degradados">
+            <legend>Degradado de fondo</legend>
+            <label className={`config-opcion ${degradado === 'original' ? 'config-opcion--activa' : ''}`}>
+              <input type="radio" name="degradado" value="original" checked={degradado === 'original'} onChange={() => onCambiarDegradado?.('original')} />
+              <span className="config-opcion-muestra config-muestra-original" aria-hidden="true" />
+              <span><strong>Original</strong><small>Violeta y rosa</small></span>
+            </label>
+            <label className={`config-opcion ${degradado === 'azul-verde' ? 'config-opcion--activa' : ''}`}>
+              <input type="radio" name="degradado" value="azul-verde" checked={degradado === 'azul-verde'} onChange={() => onCambiarDegradado?.('azul-verde')} />
+              <span className="config-opcion-muestra config-muestra-azul-verde" aria-hidden="true" />
+              <span><strong>Azul y verde</strong><small>Degradado frío</small></span>
+            </label>
+            <label className={`config-opcion ${degradado === 'rojo-naranja' ? 'config-opcion--activa' : ''}`}>
+              <input type="radio" name="degradado" value="rojo-naranja" checked={degradado === 'rojo-naranja'} onChange={() => onCambiarDegradado?.('rojo-naranja')} />
+              <span className="config-opcion-muestra config-muestra-rojo-naranja" aria-hidden="true" />
+              <span><strong>Rojo y naranja</strong><small>Degradado cálido</small></span>
+            </label>
+          </fieldset>
+        </section>
+
         <section className="config-card" aria-labelledby="config-perfil-titulo">
           <div className="config-seccion-cabecera">
             <div>

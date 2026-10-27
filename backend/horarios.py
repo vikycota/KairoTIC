@@ -128,3 +128,49 @@ def consultar():
     finally:
         if conn:
             conn.close()
+
+
+@horarios_bp.delete("/horarios")
+@requiere_login
+def eliminar_horarios():
+    carrera = (request.args.get("carrera") or "").strip()
+    try:
+        anio = int(request.args.get("anio_lectivo", ""))
+        semestre = int(request.args.get("semestre_lectivo", ""))
+        if not carrera or not 1900 <= anio <= 9999 or semestre not in (1, 2):
+            raise ValueError
+    except ValueError:
+        return jsonify({"error": "Indicá carrera, un año válido y semestre 1 o 2."}), 400
+
+    conn = None
+    try:
+        conn = obtener_conexion()
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT 1 FROM Pertenecen_A WHERE Carreras_Nombre = %s AND Email = %s",
+                (carrera, g.email),
+            )
+            if not cur.fetchone():
+                return jsonify({"error": "La carrera seleccionada no está asociada a tu cuenta."}), 404
+
+            cur.execute(
+                "DELETE FROM Horarios WHERE Carrera_Nombre = %s AND Anio_Lectivo = %s AND Semestre_Lectivo = %s",
+                (carrera, anio, semestre),
+            )
+            eliminados = cur.rowcount
+        conn.commit()
+        return jsonify({
+            "mensaje": f"Se eliminaron {eliminados} bloques horarios del período seleccionado.",
+            "carrera": carrera,
+            "anio_lectivo": anio,
+            "semestre_lectivo": semestre,
+            "eliminados": eliminados,
+        }), 200
+    except Exception:
+        if conn:
+            conn.rollback()
+        logger.exception("Error al eliminar horarios")
+        return jsonify({"error": "No se pudieron eliminar los horarios."}), 500
+    finally:
+        if conn:
+            conn.close()

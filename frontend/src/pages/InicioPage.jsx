@@ -500,7 +500,7 @@ function CargadorHorarios({ clave, titulo, descripcion, numero, onListo }) {
   const [nombreArchivo, setNombreArchivo] = useState(() => leerStorage(clave)?.archivo ?? '')
 
   const sincronizarCalendario = useCallback((resultado) => {
-    if (!resultado?.bloques?.length) return
+    if (!resultado) return
     const nuevos = resultado.bloques.map((bloque) => ({
       nombre: bloque.materia,
       dia: DIAS_CALENDARIO[bloque.dia] ?? bloque.dia,
@@ -509,6 +509,12 @@ function CargadorHorarios({ clave, titulo, descripcion, numero, onListo }) {
       salon: bloque.salon ?? '',
       extra: bloque.docente ?? '',
     }))
+    if (nuevos.length === 0) {
+      setBloques([])
+      setNombreArchivo('')
+      guardarStorage(clave, null)
+      return
+    }
     setBloques(nuevos)
     setNombreArchivo(`${resultado.carrera} · ${resultado.anio_lectivo} · Semestre ${resultado.semestre_lectivo}`)
     guardarStorage(clave, {
@@ -518,6 +524,18 @@ function CargadorHorarios({ clave, titulo, descripcion, numero, onListo }) {
       anio_lectivo: resultado.anio_lectivo,
       semestre_lectivo: resultado.semestre_lectivo,
     })
+  }, [clave])
+
+  const quitarDelCalendario = useCallback((periodo) => {
+    const guardado = leerStorage(clave)
+    const coincide = guardado
+      && guardado.carrera === periodo.carrera
+      && String(guardado.anio_lectivo) === String(periodo.anio_lectivo)
+      && String(guardado.semestre_lectivo) === String(periodo.semestre_lectivo)
+    if (!coincide) return
+    setBloques([])
+    setNombreArchivo('')
+    guardarStorage(clave, null)
   }, [clave])
 
   const listo = bloques.length > 0
@@ -532,6 +550,8 @@ function CargadorHorarios({ clave, titulo, descripcion, numero, onListo }) {
         <ScheduleImportPanel
           onImported={sincronizarCalendario}
           onSchedulesLoaded={sincronizarCalendario}
+          permitirEliminar
+          onSchedulesDeleted={quitarDelCalendario}
         />
       </div>
       {listo && <VistaSemana bloques={bloques} tipo="horarios" />}

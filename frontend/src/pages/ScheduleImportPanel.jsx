@@ -14,6 +14,8 @@ function ScheduleImportPanel({
   semestreInicial = String(new Date().getMonth() >= 6 ? 2 : 1),
   consultarHorariosExistentes = true,
   onSchedulesLoaded,
+  permitirEliminar = false,
+  onSchedulesDeleted,
 }) {
   const [carrerasRemotas, setCarrerasRemotas] = useState([])
   const carreras = carrerasDisponibles ?? carrerasRemotas
@@ -27,6 +29,7 @@ function ScheduleImportPanel({
   const [mensaje, setMensaje] = useState('')
   const [analizando, setAnalizando] = useState(false)
   const [guardando, setGuardando] = useState(false)
+  const [eliminando, setEliminando] = useState(false)
   const [bloques, setBloques] = useState([])
   const [cargando, setCargando] = useState(false)
   const [errorCarga, setErrorCarga] = useState('')
@@ -131,6 +134,27 @@ function ScheduleImportPanel({
     } finally { setGuardando(false) }
   }
 
+  async function eliminarHorarios() {
+    if (!bloques.length || !carreraActiva || !window.confirm(`¿Eliminar todos los horarios de ${carreraActiva}, ${anio}, semestre ${semestre}?`)) return
+    setEliminando(true)
+    setError('')
+    setMensaje('')
+    try {
+      const query = new URLSearchParams({ carrera: carreraActiva, anio_lectivo: anio, semestre_lectivo: semestre })
+      const res = await apiFetch(`/api/horarios?${query}`, { method: 'DELETE' })
+      const json = await leerJson(res)
+      if (!res.ok) throw new Error(json.error || 'No se pudieron eliminar los horarios.')
+      setBloques([])
+      setPreview(null)
+      setMensaje(json.mensaje || 'Se eliminaron los horarios del período seleccionado.')
+      onSchedulesDeleted?.({ carrera: carreraActiva, anio_lectivo: anio, semestre_lectivo: semestre })
+    } catch (err) {
+      setError(err.message || 'No se pudo conectar con el servidor.')
+    } finally {
+      setEliminando(false)
+    }
+  }
+
   const puedeGuardar = preview?.valido && !analizando && !guardando
 
   return (
@@ -193,9 +217,14 @@ function ScheduleImportPanel({
         {errorCarga && <p className="schedule-message schedule-error" role="alert">{errorCarga}</p>}
         {cargando ? <p>Cargando horarios…</p> : bloques.length === 0 ? <p>No hay horarios guardados para este período.</p> : (
           <div className="schedule-table-wrap"><table className="schedule-table"><thead><tr><th>Materia</th><th>Grupo</th><th>Día</th><th>Horario</th><th>Tipo</th><th>Docente</th><th>Opcional</th></tr></thead><tbody>
-            {bloques.map((b, i) => <tr key={`${b.materia}-${b.dia}-${b.hora_inicio}-${i}`}><td>{b.materia}</td><td>{b.grupo}</td><td>{b.dia}</td><td>{b.hora_inicio}–{b.hora_fin}</td><td>{b.tipo}</td><td>{b.docente || '—'}</td><td>{b.opcional ? 'Sí' : 'No'}</td></tr>)}
+          {bloques.map((b, i) => <tr key={`${b.materia}-${b.dia}-${b.hora_inicio}-${i}`}><td>{b.materia}</td><td>{b.grupo}</td><td>{b.dia}</td><td>{b.hora_inicio}–{b.hora_fin}</td><td>{b.tipo}</td><td>{b.docente || '—'}</td><td>{b.opcional ? 'Sí' : 'No'}</td></tr>)}
           </tbody></table></div>
         )}
+        {permitirEliminar && bloques.length > 0 && <div className="schedule-current-actions">
+          <button type="button" className="schedule-danger" onClick={eliminarHorarios} disabled={eliminando || cargando}>
+            {eliminando ? 'Eliminando…' : `Eliminar horarios de este semestre (${semestre})`}
+          </button>
+        </div>}
       </div>}
     </section>
   )

@@ -16,7 +16,17 @@ import ProgresoPage from './pages/ProgresoPage'
 import ConfigPage from "./pages/ConfigPage"
 import InicioPage from './pages/InicioPage'
 
+function leerPreferencia(clave, valorPorDefecto) {
+  try {
+    return localStorage.getItem(clave) || valorPorDefecto
+  } catch {
+    return valorPorDefecto
+  }
+}
+
 function App() {
+  const [tema, setTema] = useState(() => leerPreferencia('kairo-tema', 'claro'))
+  const [degradado, setDegradado] = useState(() => leerPreferencia('kairo-degradado', 'original'))
   const [usuario, setUsuario] = useState(() => {
     try {
       return JSON.parse(localStorage.getItem('kairo-usuario'))
@@ -25,6 +35,15 @@ function App() {
     }
   })
   const [vista, setVista] = useState(usuario ? 'inicio' : 'bienvenida')
+
+  useEffect(() => {
+    document.documentElement.dataset.tema = tema
+    document.documentElement.dataset.degradado = degradado
+    try {
+      localStorage.setItem('kairo-tema', tema)
+      localStorage.setItem('kairo-degradado', degradado)
+    } catch { /* las preferencias siguen aplicadas hasta recargar */ }
+  }, [tema, degradado])
 
   function iniciarSesion(datos) {
     setUsuario(datos)
@@ -101,7 +120,7 @@ function App() {
 
         {vista === 'planificar' && <PlanPage emailUsuario={usuario.email} onIr={setVista} />}
           
-        {vista === 'ajustes' && <ConfigPage />}
+        {vista === 'ajustes' && <ConfigPage tema={tema} degradado={degradado} onCambiarTema={setTema} onCambiarDegradado={setDegradado} />}
       </main>
 
     </div>

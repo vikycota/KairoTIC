@@ -36,5 +36,9 @@
 .schedule-preview-actions { display: flex; justify-content: flex-end; gap: 9px; margin-top: 13px; }
 .schedule-current h3 { margin: 0 0 10px; color: #41396a; font: 600 14px 'Sora', sans-serif; }
 .schedule-current > p { color: #777185; font-size: 13px; }
+.schedule-current-actions { display: flex; justify-content: flex-end; margin-top: 12px; }
+.schedule-danger { min-height: 38px; padding: 8px 13px; border: 1px solid #efc6cd; border-radius: 9px; background: #fff3f4; color: #a8324a; font: 600 12px 'Inter', sans-serif; cursor: pointer; }
+.schedule-danger:hover:not(:disabled) { background: #fbe3e7; }
+.schedule-danger:disabled { opacity: .55; cursor: not-allowed; }
 @media (max-width: 900px) { .schedule-import-form { grid-template-columns: repeat(2, minmax(0, 1fr)); } .schedule-import-form .schedule-primary { grid-column: 1 / -1; } }
 @media (max-width: 560px) { .schedule-import-card { padding: 17px; } .schedule-import-form { grid-template-columns: 1fr; } .schedule-import-form .schedule-primary { grid-column: auto; } .schedule-preview-summary { flex-direction: column; } .schedule-table { min-width: 730px; } }

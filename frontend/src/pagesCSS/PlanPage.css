@@ -141,7 +141,7 @@
 .plan-day-head {
   position: sticky;
   top: 0;
-  z-index: 2;
+  z-index: 10;
   background: #2000647f;
   font-family: 'Sora', sans-serif;
   font-size: 12px;
@@ -152,7 +152,7 @@
 
 .plan-corner {
   left: 0;
-  z-index: 3;
+  z-index: 11;
 }
 
 .plan-day-head {

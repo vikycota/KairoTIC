@@ -9,12 +9,22 @@ BEGIN;
 
 ALTER TABLE Hacen ADD COLUMN IF NOT EXISTS Nota NUMERIC(4,2) NULL;
 
-UPDATE Hacen h
-SET Nota = e.Nota
-FROM Examenes e
-WHERE e.Fecha = h.Examenes_Fecha
-  AND e.Materias_Nombre = h.Materias_Nombre
-  AND h.Nota IS NULL;
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = current_schema()
+          AND table_name = 'examenes'
+          AND column_name = 'nota'
+    ) THEN
+        EXECUTE 'UPDATE Hacen h
+                 SET Nota = e.Nota
+                 FROM Examenes e
+                 WHERE e.Fecha = h.Examenes_Fecha
+                   AND e.Materias_Nombre = h.Materias_Nombre
+                   AND h.Nota IS NULL';
+    END IF;
+END $$;
 
 ALTER TABLE Hacen DROP CONSTRAINT IF EXISTS fk_hacen_examen;
 

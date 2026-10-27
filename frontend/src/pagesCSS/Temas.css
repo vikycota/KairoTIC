@@ -1,0 +1,394 @@
+.config-apariencia { grid-column: 1 / -1; }
+
+@keyframes kairo-entrada-contenido {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.config-hero h1,
+.plan-header .plan-title { animation: kairo-entrada-contenido 0.6s ease both; }
+.config-hero p,
+.plan-header .plan-subtitle { animation: kairo-entrada-contenido 0.6s 0.1s ease both; }
+.config-card,
+.planificar-buttons { animation: kairo-entrada-contenido 0.55s 0.2s ease both; }
+.config-contenido > .config-card:nth-child(2) { animation-delay: 0.28s; }
+.config-contenido > .config-card:nth-child(3) { animation-delay: 0.36s; }
+.plan-periodo-selector,
+.materias-resumen,
+.planificacion-alternativas,
+.planificacion-feedback,
+.plan-grid-shell,
+.plan-guardar-footer { animation: kairo-entrada-contenido 0.55s 0.2s ease both; }
+
+.config-opciones {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 10px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.config-opciones + .config-opciones { margin-top: 18px; }
+.config-opciones legend { margin-bottom: 9px; color: #4e4960; font-size: 13px; font-weight: 650; }
+
+.config-opcion {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  min-width: 0;
+  padding: 11px 12px;
+  border: 1px solid #e4def7;
+  border-radius: 12px;
+  background: #fff;
+  color: #302b42;
+  cursor: pointer;
+}
+
+.config-opcion:has(input:checked) { border-color: #8b6be8; box-shadow: 0 0 0 2px rgba(124, 92, 252, .12); }
+.config-opcion input { accent-color: #6746d4; }
+.config-opcion strong, .config-opcion small { display: block; }
+.config-opcion strong { font-size: 13px; }
+.config-opcion small { margin-top: 2px; color: #77728b; font-size: 11px; }
+.config-opcion-muestra { width: 36px; height: 36px; flex: 0 0 36px; border: 1px solid rgba(80, 70, 110, .15); border-radius: 9px; }
+.config-muestra-clara { background: linear-gradient(135deg, #fff 50%, #eee9fa 50%); }
+.config-muestra-oscura { background: linear-gradient(135deg, #171522 50%, #302b42 50%); }
+.config-muestra-original { background: linear-gradient(135deg, #200064, #de6ade); }
+.config-muestra-azul-verde { background: linear-gradient(135deg, #0755a5, #13a985); }
+.config-muestra-rojo-naranja { background: linear-gradient(135deg, #a51638, #ff8a24); }
+
+/* Paletas alternativas para cabeceras, fondos destacados y acciones. */
+:root[data-degradado="azul-verde"] .inicio-hero,
+:root[data-degradado="azul-verde"] .config-hero,
+:root[data-degradado="azul-verde"] .pg-hero,
+:root[data-degradado="azul-verde"] .cal-hero,
+:root[data-degradado="azul-verde"] .pe-hero,
+:root[data-degradado="azul-verde"] .land-hero,
+:root[data-degradado="azul-verde"] .pe-vacio,
+:root[data-degradado="azul-verde"] .plan-header,
+:root[data-degradado="azul-verde"] .register-page,
+:root[data-degradado="azul-verde"] .login-page { background: linear-gradient(135deg, #073b78, #087b80 58%, #18a878); }
+
+:root[data-degradado="rojo-naranja"] .inicio-hero,
+:root[data-degradado="rojo-naranja"] .config-hero,
+:root[data-degradado="rojo-naranja"] .pg-hero,
+:root[data-degradado="rojo-naranja"] .cal-hero,
+:root[data-degradado="rojo-naranja"] .pe-hero,
+:root[data-degradado="rojo-naranja"] .land-hero,
+:root[data-degradado="rojo-naranja"] .pe-vacio,
+:root[data-degradado="rojo-naranja"] .plan-header,
+:root[data-degradado="rojo-naranja"] .register-page,
+:root[data-degradado="rojo-naranja"] .login-page { background: linear-gradient(135deg, #84152e, #c52a28 58%, #f28a24); }
+
+:root[data-degradado="azul-verde"] .inicio-btn:not(.inicio-btn--sec),
+:root[data-degradado="azul-verde"] .config-guardar,
+:root[data-degradado="azul-verde"] .sidebar-item--activo,
+:root[data-degradado="azul-verde"] .sidebar-item--activo:hover,
+:root[data-degradado="azul-verde"] .schedule-primary,
+:root[data-degradado="azul-verde"] .register-button,
+:root[data-degradado="azul-verde"] .login-button { background: linear-gradient(100deg, #0873a8, #13a985); }
+:root[data-degradado="azul-verde"] .sidebar-marca { background-image: linear-gradient(90deg, #0873a8, #13a985); }
+:root[data-degradado="azul-verde"] :is(.cal-btn--primario, .cal-btn--rosa, .pg-btn--primario, .pe-btn--primario, .ingresar-horario-button, .seleccionar-materias-button, .seleccionar-talleres-button, .seleccion-automatica-button, .agregar-bloque-button, .materias-modal-aplicar, .land-btn--rosa) { background: linear-gradient(100deg, #0873a8, #13a985); }
+:root[data-degradado="azul-verde"] :is(.sidebar-avatar, .config-avatar, .pe-extra--total, .pg-sello, .pe-sem-num, .cal-dia-cab--hoy strong) { background: linear-gradient(135deg, #0873a8, #13a985); }
+:root[data-degradado="azul-verde"] :is(.inicio-avance-barra span, .inicio-paso-numero, .pe-btn--rosa, .pe-sem-num, .pe-sem-barra span, .pg-sem-num, .pg-nota--activa) { background: linear-gradient(100deg, #0873a8, #13a985); }
+:root[data-degradado="azul-verde"] .inicio-avance-barra span { background: #b9efff; }
+:root[data-degradado="azul-verde"] .pe-btn--rosa { box-shadow: 0 8px 22px rgba(8, 115, 168, .35); }
+
+:root[data-degradado="rojo-naranja"] .inicio-btn:not(.inicio-btn--sec),
+:root[data-degradado="rojo-naranja"] .config-guardar,
+:root[data-degradado="rojo-naranja"] .sidebar-item--activo,
+:root[data-degradado="rojo-naranja"] .sidebar-item--activo:hover,
+:root[data-degradado="rojo-naranja"] .schedule-primary,
+:root[data-degradado="rojo-naranja"] .register-button,
+:root[data-degradado="rojo-naranja"] .login-button { background: linear-gradient(100deg, #bc243b, #f28a24); }
+:root[data-degradado="rojo-naranja"] .sidebar-marca { background-image: linear-gradient(90deg, #bc243b, #f28a24); }
+:root[data-degradado="rojo-naranja"] :is(.cal-btn--primario, .cal-btn--rosa, .pg-btn--primario, .pe-btn--primario, .ingresar-horario-button, .seleccionar-materias-button, .seleccionar-talleres-button, .seleccion-automatica-button, .agregar-bloque-button, .materias-modal-aplicar, .land-btn--rosa) { background: linear-gradient(100deg, #bc243b, #f28a24); }
+:root[data-degradado="rojo-naranja"] :is(.sidebar-avatar, .config-avatar, .pe-extra--total, .pg-sello, .pe-sem-num, .cal-dia-cab--hoy strong) { background: linear-gradient(135deg, #bc243b, #f28a24); }
+:root[data-degradado="rojo-naranja"] :is(.inicio-avance-barra span, .inicio-paso-numero, .pe-btn--rosa, .pe-sem-num, .pe-sem-barra span, .pg-sem-num, .pg-nota--activa) { background: linear-gradient(100deg, #bc243b, #f28a24); }
+:root[data-degradado="rojo-naranja"] .inicio-avance-barra span { background: #ffd2a6; }
+:root[data-degradado="rojo-naranja"] .pe-btn--rosa { box-shadow: 0 8px 22px rgba(188, 36, 59, .35); }
+
+/* Tema oscuro para las superficies y controles de toda la aplicación. */
+:root[data-tema="oscuro"] { color-scheme: dark; background: #17151f; }
+:root[data-tema="oscuro"] .app-layout,
+:root[data-tema="oscuro"] .app-content,
+:root[data-tema="oscuro"] .pe-page,
+:root[data-tema="oscuro"] .inicio-page,
+:root[data-tema="oscuro"] .config-page,
+:root[data-tema="oscuro"] .pg-page,
+:root[data-tema="oscuro"] .cal-page { background-color: #17151f; color: #eeeaf7; }
+:root[data-tema="oscuro"] .sidebar,
+:root[data-tema="oscuro"] .pe-semestre,
+:root[data-tema="oscuro"] .pe-extra,
+:root[data-tema="oscuro"] .pe-modal,
+:root[data-tema="oscuro"] .pe-detalle,
+:root[data-tema="oscuro"] .pe-vacio-principal,
+:root[data-tema="oscuro"] .pe-formatos,
+:root[data-tema="oscuro"] .pg-carrera,
+:root[data-tema="oscuro"] .pg-resumen,
+:root[data-tema="oscuro"] .pg-dato,
+:root[data-tema="oscuro"] .cal-grilla-marco,
+:root[data-tema="oscuro"] .cal-panel,
+:root[data-tema="oscuro"] .cal-filtro,
+:root[data-tema="oscuro"] .config-card,
+:root[data-tema="oscuro"] .inicio-paso,
+:root[data-tema="oscuro"] .pg-card,
+:root[data-tema="oscuro"] .pg-panel,
+:root[data-tema="oscuro"] .pg-semestre,
+:root[data-tema="oscuro"] .pg-recientes li,
+:root[data-tema="oscuro"] .pg-vacio,
+:root[data-tema="oscuro"] .cal-card,
+:root[data-tema="oscuro"] .schedule-import-card,
+:root[data-tema="oscuro"] .plan-card { background-color: #24212f; border-color: #393447; color: #eeeaf7; }
+:root[data-tema="oscuro"] .config-usuario,
+:root[data-tema="oscuro"] .config-opcion,
+:root[data-tema="oscuro"] .pe-buscar input,
+:root[data-tema="oscuro"] .pe-cat,
+:root[data-tema="oscuro"] .pe-modal-materia,
+:root[data-tema="oscuro"] .cal-horas span,
+:root[data-tema="oscuro"] .cal-dia-cab,
+:root[data-tema="oscuro"] .cal-esquina,
+:root[data-tema="oscuro"] .cal-columna,
+:root[data-tema="oscuro"] .inicio-zona,
+:root[data-tema="oscuro"] .inicio-btn--sec,
+:root[data-tema="oscuro"] .pg-materia,
+:root[data-tema="oscuro"] .schedule-table th,
+:root[data-tema="oscuro"] .schedule-secondary { background-color: #302c3c; color: #eeeaf7; }
+:root[data-tema="oscuro"] .config-card h2,
+:root[data-tema="oscuro"] .pe-page,
+:root[data-tema="oscuro"] .pe-sem-titulo strong,
+:root[data-tema="oscuro"] .pe-extra-cab strong,
+:root[data-tema="oscuro"] .pe-modal header h2,
+:root[data-tema="oscuro"] .pe-modal-cuerpo h3,
+:root[data-tema="oscuro"] .pe-cat strong,
+:root[data-tema="oscuro"] .pe-detalle h2,
+:root[data-tema="oscuro"] .pg-carrera-nombre,
+:root[data-tema="oscuro"] .pg-anillo-texto strong,
+:root[data-tema="oscuro"] .pg-dato strong,
+:root[data-tema="oscuro"] .pg-panel-cabecera h2,
+:root[data-tema="oscuro"] .cal-panel h2,
+:root[data-tema="oscuro"] .cal-campo,
+:root[data-tema="oscuro"] .cal-dia-cab strong,
+:root[data-tema="oscuro"] .cal-filtro,
+:root[data-tema="oscuro"] .config-usuario-nombre,
+:root[data-tema="oscuro"] .config-campo label,
+:root[data-tema="oscuro"] .config-opciones legend,
+:root[data-tema="oscuro"] .config-opcion,
+:root[data-tema="oscuro"] .inicio-paso-titulos h2,
+:root[data-tema="oscuro"] .inicio-zona strong,
+:root[data-tema="oscuro"] .inicio-bloque strong,
+:root[data-tema="oscuro"] .pg-titulo,
+:root[data-tema="oscuro"] .pg-semestre header strong,
+:root[data-tema="oscuro"] .pg-materia,
+:root[data-tema="oscuro"] .schedule-import-heading h2 { color: #eeeaf7; }
+:root[data-tema="oscuro"] .config-usuario-email,
+:root[data-tema="oscuro"] .pe-sem-titulo span,
+:root[data-tema="oscuro"] .pe-extra-cab span,
+:root[data-tema="oscuro"] .pe-detalle p,
+:root[data-tema="oscuro"] .pe-detalle-listas span,
+:root[data-tema="oscuro"] .pe-detalle-listas em,
+:root[data-tema="oscuro"] .pe-modal-materia span,
+:root[data-tema="oscuro"] .pg-carrera-datos,
+:root[data-tema="oscuro"] .pg-anillo-texto span,
+:root[data-tema="oscuro"] .pg-dato span,
+:root[data-tema="oscuro"] .cal-panel-tipo,
+:root[data-tema="oscuro"] .cal-panel p,
+:root[data-tema="oscuro"] .cal-panel small,
+:root[data-tema="oscuro"] .cal-dia-cab span,
+:root[data-tema="oscuro"] .cal-evento span,
+:root[data-tema="oscuro"] .cal-pista,
+:root[data-tema="oscuro"] .config-seccion-cabecera > p,
+:root[data-tema="oscuro"] .config-opcion small,
+:root[data-tema="oscuro"] .config-seccion-etiqueta,
+:root[data-tema="oscuro"] .inicio-paso-titulos p,
+:root[data-tema="oscuro"] .inicio-zona span,
+:root[data-tema="oscuro"] .pg-ayuda,
+:root[data-tema="oscuro"] .pg-pista,
+:root[data-tema="oscuro"] .sidebar-grupo-titulo,
+:root[data-tema="oscuro"] .sidebar-usuario-datos span,
+:root[data-tema="oscuro"] .schedule-import-heading p,
+:root[data-tema="oscuro"] .schedule-help,
+:root[data-tema="oscuro"] .schedule-templates { color: #b8b1ca; }
+:root[data-tema="oscuro"] .sidebar { border-color: #393447; }
+:root[data-tema="oscuro"] .sidebar-logo-marco { background: linear-gradient(135deg, #f1ebff 0%, #ffffff 100%); border-color: #e4def7; }
+:root[data-tema="oscuro"] .pe-page { --texto: #eeeaf7; --suave: #b8b1ca; --borde: #393447; --violeta: #d7c9ff; }
+:root[data-tema="oscuro"] .pg-page { --texto: #eeeaf7; --suave: #b8b1ca; --borde: #393447; --violeta: #d7c9ff; }
+:root[data-tema="oscuro"] .cal-page { --texto: #eeeaf7; --suave: #b8b1ca; --borde: #393447; --violeta: #d7c9ff; }
+:root[data-tema="oscuro"] .sidebar-header,
+:root[data-tema="oscuro"] .sidebar-footer { border-color: #393447; }
+:root[data-tema="oscuro"] .sidebar-toggle,
+:root[data-tema="oscuro"] .config-input-wrapper,
+:root[data-tema="oscuro"] .schedule-import-form input,
+:root[data-tema="oscuro"] .schedule-import-form select { background-color: #1c1a25; border-color: #494357; color: #eeeaf7; }
+:root[data-tema="oscuro"] .sidebar-item { color: #d2cde0; }
+:root[data-tema="oscuro"] .sidebar-item:hover { background: #302c3c; color: #fff; }
+:root[data-tema="oscuro"] .schedule-danger { background: #40272d; border-color: #70414d; color: #ffd4dc; }
+:root[data-tema="oscuro"] .schedule-danger:hover:not(:disabled) { background: #56313b; }
+:root[data-tema="oscuro"] .sidebar-usuario { background: #302c3c; }
+:root[data-tema="oscuro"] .sidebar-avatar { background: #393249; }
+:root[data-tema="oscuro"] .pe-sem-barra,
+:root[data-tema="oscuro"] .pe-extra-barra,
+:root[data-tema="oscuro"] .pe-progreso,
+:root[data-tema="oscuro"] .pg-carrera-barra,
+:root[data-tema="oscuro"] .pg-sem-barra { background: #494357; }
+:root[data-tema="oscuro"] .pe-semestre,
+:root[data-tema="oscuro"] .pe-extra,
+:root[data-tema="oscuro"] .pe-modal,
+:root[data-tema="oscuro"] .pe-detalle,
+:root[data-tema="oscuro"] .pg-carrera,
+:root[data-tema="oscuro"] .pg-resumen,
+:root[data-tema="oscuro"] .pg-panel,
+:root[data-tema="oscuro"] .pg-dato,
+:root[data-tema="oscuro"] .cal-grilla-marco,
+:root[data-tema="oscuro"] .cal-panel,
+:root[data-tema="oscuro"] .cal-filtro { border-color: #393447; }
+:root[data-tema="oscuro"] .pe-materia,
+:root[data-tema="oscuro"] .pg-materia { background-color: #302c3c; border-color: #494357; color: #eeeaf7; }
+:root[data-tema="oscuro"] .pe-materia-cred,
+:root[data-tema="oscuro"] .pg-materia-cred { background-color: #494357; color: #eeeaf7; }
+:root[data-tema="oscuro"] .pe-cat--activa { background-color: #393249; }
+:root[data-tema="oscuro"] .pe-sem-titulo strong,
+:root[data-tema="oscuro"] .pe-extra-cab strong,
+:root[data-tema="oscuro"] .pg-carrera-nombre,
+:root[data-tema="oscuro"] .pg-anillo-texto strong,
+:root[data-tema="oscuro"] .pg-dato strong,
+:root[data-tema="oscuro"] .cal-panel h2 { color: #d7c9ff; }
+:root[data-tema="oscuro"] .cal-esquina,
+:root[data-tema="oscuro"] .cal-dia-cab { background-color: #302c3c; }
+:root[data-tema="oscuro"] .cal-horas span { background: #24212f; }
+:root[data-tema="oscuro"] .cal-columna { background-color: #24212f; background-image: repeating-linear-gradient(to bottom, transparent 0, transparent calc(var(--px) - 1px), #393447 calc(var(--px) - 1px), #393447 var(--px)); }
+:root[data-tema="oscuro"] .cal-columna:hover,
+:root[data-tema="oscuro"] .cal-columna--hoy { background-color: #302c3c; }
+:root[data-tema="oscuro"] .cal-evento { color: #eeeaf7; border-color: color-mix(in srgb, var(--c) 55%, #24212f); background: color-mix(in srgb, var(--c) 28%, #24212f); }
+:root[data-tema="oscuro"] .pe-modal-materia,
+:root[data-tema="oscuro"] .pe-cat,
+:root[data-tema="oscuro"] .pe-buscar input,
+:root[data-tema="oscuro"] .cal-campo input,
+:root[data-tema="oscuro"] .pe-extra-botones button { background-color: #302c3c; border-color: #494357; color: #eeeaf7; }
+:root[data-tema="oscuro"] .pe-vacio-principal,
+:root[data-tema="oscuro"] .pe-formatos { background-color: #24212f; color: #eeeaf7; }
+:root[data-tema="oscuro"] .pe-vacio-pasos strong,
+:root[data-tema="oscuro"] .pe-formatos strong { color: #d7c9ff; }
+:root[data-tema="oscuro"] .sidebar-usuario-datos strong { color: #eeeaf7; }
+:root[data-tema="oscuro"] .inicio-paso-titulos h2,
+:root[data-tema="oscuro"] .pg-titulo,
+:root[data-tema="oscuro"] .pg-semestre header strong { color: #d7c9ff; }
+:root[data-tema="oscuro"] .inicio-resumen,
+:root[data-tema="oscuro"] .inicio-revision,
+:root[data-tema="oscuro"] .inicio-bloque,
+:root[data-tema="oscuro"] .pg-materia-cred { background-color: #393249; color: #e5dcff; }
+:root[data-tema="oscuro"] .config-opcion input { accent-color: #ac91ff; }
+:root[data-tema="oscuro"] .app-content :is(input, select, textarea) { background-color: #1c1a25; border-color: #494357; color: #eeeaf7; }
+:root[data-tema="oscuro"] .app-content :is(.plan-grid-wrapper, .plan-grid-shell, .materias-modal, .horarios-import-modal, .bloque-manual-modal) { background-color: #24212f; border-color: #393447; color: #eeeaf7; }
+:root[data-tema="oscuro"] .app-content :is(.plan-title, .plan-subtitle, .plan-day-head, .plan-hora, .materias-modal-header, .materias-disponibles, .materia-disponible, .pg-panel, .pg-panel-cabecera, .pg-fecha) { color: #eeeaf7; }
+:root[data-tema="oscuro"] .app-content :is(.plan-cell, .plan-slot, .materia-disponible, .pg-nota, .pg-historial li) { background-color: #302c3c; border-color: #494357; color: #eeeaf7; }
+:root[data-tema="oscuro"] .schedule-table-wrap,
+:root[data-tema="oscuro"] .schedule-table th,
+:root[data-tema="oscuro"] .schedule-table td { border-color: #393447; }
+
+@media (max-width: 760px) {
+  .config-apariencia { grid-column: auto; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .config-hero h1,
+  .config-hero p,
+  .config-card,
+  .plan-header .plan-title,
+  .plan-header .plan-subtitle,
+  .planificar-buttons,
+  .plan-periodo-selector,
+  .materias-resumen,
+  .planificacion-alternativas,
+  .planificacion-feedback,
+  .plan-grid-shell,
+  .plan-guardar-footer { animation: none; }
+}
+
+/* Detalles de las vistas con grillas y paneles propios. */
+:root[data-tema="oscuro"] .plan-page { --plan-texto: #eeeaf7; --plan-suave: #b8b1ca; --plan-violeta: #d7c9ff; --plan-borde: #393447; }
+:root[data-tema="oscuro"][data-degradado="original"] .plan-page { background: #17151f; }
+:root[data-tema="oscuro"] .plan-periodo-selector,
+:root[data-tema="oscuro"] .materias-resumen,
+:root[data-tema="oscuro"] .planificacion-alternativas,
+:root[data-tema="oscuro"] .planificacion-feedback,
+:root[data-tema="oscuro"] .plan-grid-shell { background: #24212f; border-color: #393447; color: #eeeaf7; }
+:root[data-tema="oscuro"] .plan-page .plan-cell,
+:root[data-tema="oscuro"] .plan-page .plan-slot,
+:root[data-tema="oscuro"] .plan-page .plan-day-head,
+:root[data-tema="oscuro"] .plan-page .plan-corner,
+:root[data-tema="oscuro"] .plan-page .plan-hora,
+:root[data-tema="oscuro"] .talleres-disponibles-lista li,
+:root[data-tema="oscuro"] .seleccion-automatica-opciones > ol > li { background: #302c3c; border-color: #494357; color: #eeeaf7; }
+:root[data-tema="oscuro"] .plan-page .plan-slot:hover { background: #393249; }
+:root[data-tema="oscuro"] .plan-page :is(.plan-title, .plan-day-nombre, .plan-periodo-selector label, .materias-resumen, .materia-disponible, .taller-disponible-detalle, .plan-guardar-footer p) { color: #eeeaf7; }
+:root[data-tema="oscuro"] .plan-page :is(.plan-subtitle, .seleccion-automatica-encabezado p, .seleccion-automatica-mensaje, .seleccion-automatica-horarios, .taller-disponible-detalle small) { color: #b8b1ca; }
+:root[data-tema="oscuro"] .plan-page .plan-event { background: #393249; border-color: #62577d; color: #eeeaf7; }
+:root[data-tema="oscuro"] .plan-page .plan-event--taller { background: #203a37; border-color: #3d756d; color: #c8eee7; }
+:root[data-tema="oscuro"] .plan-page .plan-event--manual { background: #402c3a; border-color: #76506a; color: #f1d8e8; }
+:root[data-tema="oscuro"] .plan-page :is(.materias-modal, .horarios-import-modal, .bloque-manual-modal) { background: #24212f; color: #eeeaf7; }
+:root[data-tema="oscuro"] .plan-page :is(.materias-modal-header, .materias-modal-footer) { border-color: #393447; }
+:root[data-tema="oscuro"] .plan-page :is(.materias-modal-cancelar, .seleccion-automatica-aplicar, .bloques-manuales-resumen li button) { background: #393249; color: #eeeaf7; }
+:root[data-tema="oscuro"] .pg-resumen .pg-dato { background: #302c3c; }
+:root[data-tema="oscuro"] .pg-carrera-barra i,
+:root[data-tema="oscuro"] .pg-sem-barra i { background: linear-gradient(90deg, #a68bff, #d77ecb); }
+:root[data-tema="oscuro"] .sidebar-avatar { background: #393249; }
+:root[data-tema="oscuro"][data-degradado="azul-verde"] .sidebar-avatar,
+:root[data-tema="oscuro"][data-degradado="azul-verde"] .config-avatar { background: linear-gradient(135deg, #0873a8, #13a985); }
+:root[data-tema="oscuro"][data-degradado="rojo-naranja"] .sidebar-avatar,
+:root[data-tema="oscuro"][data-degradado="rojo-naranja"] .config-avatar { background: linear-gradient(135deg, #bc243b, #f28a24); }
+:root[data-degradado="azul-verde"] :is(.cal-btn--primario, .cal-btn--rosa, .pg-btn--primario, .pe-btn--primario, .ingresar-horario-button, .seleccionar-materias-button, .seleccionar-talleres-button, .seleccion-automatica-button, .agregar-bloque-button, .materias-modal-aplicar, .land-btn--rosa),
+:root[data-degradado="rojo-naranja"] :is(.cal-btn--primario, .cal-btn--rosa, .pg-btn--primario, .pe-btn--primario, .ingresar-horario-button, .seleccionar-materias-button, .seleccionar-talleres-button, .seleccion-automatica-button, .agregar-bloque-button, .materias-modal-aplicar, .land-btn--rosa) { color: #fff; }
+:root[data-tema="claro"] .plan-page { background: #fff; }
+
+/* Recolorea también los textos y acentos violetas ya definidos en cada pantalla. */
+:root[data-degradado="azul-verde"] :is(.inicio-page, .config-page, .pe-page, .pg-page, .cal-page) {
+  --noche: #073b78;
+  --violeta: #0873a8;
+  --violeta-claro: #13a985;
+  --rosa: #13a985;
+  --rosa-claro: #9cebd5;
+  --borde: #cde8e5;
+  --config-noche: #073b78;
+  --config-violeta: #0873a8;
+  --config-lila: #13a985;
+  --config-rosa: #42c6a2;
+}
+:root[data-degradado="azul-verde"] .plan-page {
+  --plan-noche: #073b78;
+  --plan-violeta: #0873a8;
+  --plan-violeta-claro: #13a985;
+  --plan-rosa: #13a985;
+  --plan-borde: #cde8e5;
+}
+:root[data-degradado="rojo-naranja"] :is(.inicio-page, .config-page, .pe-page, .pg-page, .cal-page) {
+  --noche: #84152e;
+  --violeta: #bc243b;
+  --violeta-claro: #f28a24;
+  --rosa: #f28a24;
+  --rosa-claro: #ffd0a1;
+  --borde: #efd1cf;
+  --config-noche: #84152e;
+  --config-violeta: #bc243b;
+  --config-lila: #f28a24;
+  --config-rosa: #f28a24;
+}
+:root[data-degradado="rojo-naranja"] .plan-page {
+  --plan-noche: #84152e;
+  --plan-violeta: #bc243b;
+  --plan-violeta-claro: #f28a24;
+  --plan-rosa: #f28a24;
+  --plan-borde: #efd1cf;
+}
+
+:root[data-degradado="azul-verde"] :is(.inicio-paso-titulos h2, .inicio-zona strong, .inicio-enlace, .inicio-resumen, .inicio-bloque, .inicio-bloque strong, .inicio-dia-nombre, .inicio-estado--pendiente, .config-seccion-etiqueta, .config-card h2, .config-usuario-nombre, .sidebar-usuario-datos strong, .sidebar-item:hover, .sidebar-toggle, .schedule-import-heading h2, .schedule-templates a, .schedule-preview-summary, .schedule-current h3, .pg-carrera-nombre, .pg-dato strong, .pg-titulo, .pg-semestre header strong, .pg-vacio h2, .pg-materia-cred, .pe-cat strong, .pe-detalle h2, .pe-sem-titulo strong, .pe-extra-cab strong, .pe-materia-cred, .pe-confirmar-texto strong, .cal-aviso, .cal-panel h2, .cal-campo, .cal-dia-cab strong, .cal-btn--claro, .plan-page .plan-day-nombre, .plan-periodo-selector label, .taller-disponible-detalle, .materia-disponible, .materias-disponibles, .seleccion-automatica-encabezado h2, .materias-modal-header h2, .plan-event, .materias-modal-close) { color: #0873a8; }
+:root[data-degradado="azul-verde"] :is(.inicio-estado--pendiente, .inicio-dia-nombre, .inicio-enlace, .inicio-zona, .inicio-resumen, .inicio-bloque, .config-seccion-etiqueta, .pe-cerrar, .pg-cerrar, .cal-cerrar, .plan-slot-mas, .materias-modal-close, .bloques-manuales-resumen li button, .pl-deshacer, .pl-chip-quitada span) { color: #087b69; }
+:root[data-degradado="rojo-naranja"] :is(.inicio-paso-titulos h2, .inicio-zona strong, .inicio-enlace, .inicio-resumen, .inicio-bloque, .inicio-bloque strong, .inicio-dia-nombre, .inicio-estado--pendiente, .config-seccion-etiqueta, .config-card h2, .config-usuario-nombre, .sidebar-usuario-datos strong, .sidebar-item:hover, .sidebar-toggle, .schedule-import-heading h2, .schedule-templates a, .schedule-preview-summary, .schedule-current h3, .pg-carrera-nombre, .pg-dato strong, .pg-titulo, .pg-semestre header strong, .pg-vacio h2, .pg-materia-cred, .pe-cat strong, .pe-detalle h2, .pe-sem-titulo strong, .pe-extra-cab strong, .pe-materia-cred, .pe-confirmar-texto strong, .cal-aviso, .cal-panel h2, .cal-campo, .cal-dia-cab strong, .cal-btn--claro, .plan-page .plan-day-nombre, .plan-periodo-selector label, .taller-disponible-detalle, .materia-disponible, .materias-disponibles, .seleccion-automatica-encabezado h2, .materias-modal-header h2, .plan-event, .materias-modal-close) { color: #bc243b; }
+:root[data-degradado="rojo-naranja"] :is(.inicio-estado--pendiente, .inicio-dia-nombre, .inicio-enlace, .inicio-zona, .inicio-resumen, .inicio-bloque, .config-seccion-etiqueta, .pe-cerrar, .pg-cerrar, .cal-cerrar, .plan-slot-mas, .materias-modal-close, .bloques-manuales-resumen li button, .pl-deshacer, .pl-chip-quitada span) { color: #c35328; }
+:root[data-tema="oscuro"][data-degradado="azul-verde"] :is(.inicio-page, .config-page, .pe-page, .pg-page, .cal-page) { --texto: #eeeaf7; --suave: #b8b1ca; }
+:root[data-tema="oscuro"][data-degradado="rojo-naranja"] :is(.inicio-page, .config-page, .pe-page, .pg-page, .cal-page) { --texto: #eeeaf7; --suave: #b8b1ca; }
+:root[data-tema="oscuro"][data-degradado="azul-verde"] .plan-page { --plan-texto: #eeeaf7; --plan-suave: #b8b1ca; }
+:root[data-tema="oscuro"][data-degradado="rojo-naranja"] .plan-page { --plan-texto: #eeeaf7; --plan-suave: #b8b1ca; }
+:root[data-tema="oscuro"][data-degradado="azul-verde"] :is(.config-card h2, .config-seccion-etiqueta, .sidebar-usuario-datos strong, .pg-dato strong, .pg-titulo, .pg-semestre header strong, .pe-sem-titulo strong, .pe-extra-cab strong, .pe-cat strong, .pe-detalle h2, .cal-panel h2, .cal-dia-cab strong, .plan-day-nombre, .plan-periodo-selector label, .taller-disponible-detalle) { color: #13a985; }
+:root[data-tema="oscuro"][data-degradado="rojo-naranja"] :is(.config-card h2, .config-seccion-etiqueta, .sidebar-usuario-datos strong, .pg-dato strong, .pg-titulo, .pg-semestre header strong, .pe-sem-titulo strong, .pe-extra-cab strong, .pe-cat strong, .pe-detalle h2, .cal-panel h2, .cal-dia-cab strong, .plan-day-nombre, .plan-periodo-selector label, .taller-disponible-detalle) { color: #f28a24; }
