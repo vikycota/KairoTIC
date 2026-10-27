@@ -330,6 +330,15 @@
 :root[data-tema="oscuro"] .plan-page :is(.materias-modal, .horarios-import-modal, .bloque-manual-modal) { background: #24212f; color: #eeeaf7; }
 :root[data-tema="oscuro"] .plan-page :is(.materias-modal-header, .materias-modal-footer) { border-color: #393447; }
 :root[data-tema="oscuro"] .plan-page :is(.materias-modal-cancelar, .seleccion-automatica-aplicar, .bloques-manuales-resumen li button) { background: #393249; color: #eeeaf7; }
+:root[data-tema="oscuro"] .plan-page .materias-disponibles { background: #24212f; border-color: #393447; color: #eeeaf7; }
+:root[data-tema="oscuro"] .plan-page .materias-disponibles-header h2,
+:root[data-tema="oscuro"] .plan-page .materia-disponible-nombre { color: #eeeaf7; }
+:root[data-tema="oscuro"] .plan-page :is(.materias-disponibles-header p, .materias-disponibles-vacio, .materias-sin-oferta, .materia-disponible-grupos) { color: #b8b1ca; }
+:root[data-tema="oscuro"] .plan-page .materia-grupo { background: #393249; color: #eeeaf7; }
+:root[data-tema="oscuro"] .plan-page .materias-no-habilitadas { background: #39332a; border-color: #61543a; }
+:root[data-tema="oscuro"] .plan-page .materias-no-habilitadas h3 { color: #f0d18d; }
+:root[data-tema="oscuro"] .plan-page .materias-no-habilitadas li,
+:root[data-tema="oscuro"] .plan-page .materias-no-habilitadas li span { color: #e8dfca; }
 :root[data-tema="oscuro"] .pg-resumen .pg-dato { background: #302c3c; }
 :root[data-tema="oscuro"] .pg-carrera-barra i,
 :root[data-tema="oscuro"] .pg-sem-barra i { background: linear-gradient(90deg, #a68bff, #d77ecb); }
