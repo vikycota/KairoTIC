@@ -1,0 +1,105 @@
+/*
+  Pantalla de Pasantías. Reutiliza las clases pg-* de "Mi progreso" (cabecera, tarjetas, anillo,
+  botones), que ya tienen sus variantes de tema oscuro y degradados en Temas.css.
+  Acá solo van los estilos propios (pa-*).
+*/
+
+.pg-datos.pa-datos { grid-template-columns: repeat(3, minmax(130px, 1fr)); }
+
+.pa-meta {
+  flex-basis: 100%;
+  margin: 0;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: #e8f7ef;
+  color: #0b4f37;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.pa-columnas {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr));
+  gap: 22px;
+  align-items: start;
+}
+
+.pa-fila { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 14px; }
+
+.pa-campo { display: flex; flex-direction: column; gap: 6px; color: var(--violeta); font-size: 14px; font-weight: 600; }
+.pa-campo small { color: var(--suave); font-weight: 400; }
+.pa-campo--chico { max-width: 220px; }
+
+.pa-campo input,
+.pa-campo select,
+.pa-campo textarea {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px 12px;
+  border: 1.5px solid #d9d2f5;
+  border-radius: 10px;
+  background: #fff;
+  color: var(--texto);
+  font: 400 15px 'Inter', sans-serif;
+}
+
+.pa-campo textarea { resize: vertical; }
+
+.pg-page select:focus-visible,
+.pg-page textarea:focus-visible {
+  outline: 3px solid #c46bef;
+  outline-offset: 2px;
+}
+
+.pa-calculo {
+  margin: 0;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: #f4f0ff;
+  color: var(--suave);
+  font-size: 14px;
+}
+
+.pa-calculo strong { color: var(--violeta); }
+
+.pa-vacio { margin: 0; color: var(--suave); font-size: 14px; }
+
+.pa-lista { display: flex; flex-direction: column; gap: 10px; margin: 0; padding: 0; list-style: none; }
+
+.pa-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 16px;
+  border: 1px solid var(--borde);
+  border-radius: 14px;
+  background: #faf8ff;
+  animation: pg-entra 0.35s ease both;
+}
+
+.pa-item-principal { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.pa-item-principal strong { color: var(--violeta); font: 600 15px 'Sora', sans-serif; overflow-wrap: anywhere; }
+.pa-item-principal span { color: var(--suave); font-size: 14px; }
+.pa-item-principal small { color: var(--suave); font-size: 13px; overflow-wrap: anywhere; }
+
+.pa-horas {
+  flex-shrink: 0;
+  padding: 6px 12px;
+  border-radius: 10px;
+  background: linear-gradient(90deg, #7c5cfc, #de6ade);
+  color: #fff;
+  font: 700 14px 'Sora', sans-serif;
+}
+
+/* Tema oscuro */
+:root[data-tema="oscuro"] .pa-campo input,
+:root[data-tema="oscuro"] .pa-campo select,
+:root[data-tema="oscuro"] .pa-campo textarea { background-color: #1c1a25; border-color: #494357; color: #eeeaf7; }
+:root[data-tema="oscuro"] .pa-item,
+:root[data-tema="oscuro"] .pa-calculo { background-color: #302c3c; border-color: #494357; }
+:root[data-tema="oscuro"] .pa-meta { background: #1e3a2f; color: #bdf0d6; }
+
+@media (max-width: 860px) {
+  .pg-datos.pa-datos { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
