@@ -15,6 +15,7 @@ import PlanPage from './pages/PlanPage'
 import ProgresoPage from './pages/ProgresoPage'
 import ConfigPage from "./pages/ConfigPage"
 import InicioPage from './pages/InicioPage'
+import PasantiasPage from './pages/PasantiasPage'
 
 function leerPreferencia(clave, valorPorDefecto) {
   try {
@@ -117,6 +118,8 @@ function App() {
         {vista === 'plan-estudio' && <StudyPlanPage />}
 
         {vista === 'progreso' && <ProgresoPage onIr={setVista} />}
+
+        {vista === 'pasantias' && <PasantiasPage emailUsuario={usuario.email} />}
 
         {vista === 'planificar' && <PlanPage emailUsuario={usuario.email} onIr={setVista} />}
           

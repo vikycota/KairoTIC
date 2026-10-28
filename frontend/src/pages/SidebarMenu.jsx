@@ -8,6 +8,7 @@ const GRUPOS = [
       { id: 'inicio', etiqueta: 'Cargas', icono: 'M12 16V4m0 0l-4 4m4-4l4 4M4 16v3a1 1 0 001 1h14a1 1 0 001-1v-3' },
       { id: 'plan-estudio', etiqueta: 'Plan de estudio', icono: 'M12 3L2 8l10 5 10-5-10-5zM6 10.5V15c0 1.5 3 3 6 3s6-1.5 6-3v-4.5' },
       { id: 'progreso', etiqueta: 'Mi progreso', icono: 'M4 19V9m6 10V5m6 14v-7m4 7H2' },
+      { id: 'pasantias', etiqueta: 'Pasantías', icono: 'M4 8h16a1 1 0 011 1v9a1 1 0 01-1 1H4a1 1 0 01-1-1V9a1 1 0 011-1zM9 8V6a1 1 0 011-1h4a1 1 0 011 1v2M3 13h18' },
     ],
   },
   {
