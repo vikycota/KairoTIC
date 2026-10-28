@@ -13,6 +13,8 @@ import {
 } from './conflictosHorario'
 import { generarCombinacionesHorario } from './generarCombinacionesHorario'
 import { formatearDuracion, ordenarCombinacionesHorario } from './rankingHorarios'
+import { buscarOpcionesSeleccion } from './seleccionAutomatica'
+import { calcularCostoSeleccion, crearConfigCosto, etiquetaSemestre, formatearMonto } from './costosSemestre'
 import { apiFetch, EVENTO_CARRERAS_ACTUALIZADAS } from '../api'
 
 const DIAS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom']
@@ -173,6 +175,8 @@ function PlanPage({ emailUsuario, onIr }) {
     return String(talleres.semestre ?? (new Date().getMonth() >= 6 ? 2 : 1))
   })
   const [planMaterias, setPlanMaterias] = useState([])
+  const [valorCredito, setValorCredito] = useState(null)
+  const [datosEconomicos, setDatosEconomicos] = useState({ beca: null, presupuestoMensual: null, gastosExtra: 0 })
   const [bloquesOferta, setBloquesOferta] = useState([])
   const [respuestaAcademica, setRespuestaAcademica] = useState(null)
   const [materiasSeleccionadas, setMateriasSeleccionadas] = useState(estadoPlanInicial.materias)
@@ -227,6 +231,7 @@ function PlanPage({ emailUsuario, onIr }) {
         if (!res.ok) throw new Error(json.error || 'No se pudo cargar el plan de esta carrera.')
         if (vigente) {
           setPlanMaterias(json.materias ?? [])
+          setValorCredito(json.valor_credito ?? null)
           setErrorPlan('')
         }
       })
@@ -271,6 +276,36 @@ function PlanPage({ emailUsuario, onIr }) {
       .finally(() => vigente && setCargandoHorarios(false))
     return () => { vigente = false }
   }, [carrera, anioLectivo, semestreLectivo, revisionHorarios])
+
+  // Datos económicos de la persona: beca, presupuesto mensual y gastos extra del semestre elegido.
+  useEffect(() => {
+    if (!emailUsuario) return undefined
+    let vigente = true
+    const semestre = etiquetaSemestre(anioLectivo, semestreLectivo)
+    Promise.all([
+      apiFetch('/api/presupuesto').then((res) => (res.ok ? res.json() : null)).catch(() => null),
+      semestre
+        ? apiFetch(`/api/gastos-extra?semestre=${semestre}`).then((res) => (res.ok ? res.json() : null)).catch(() => null)
+        : Promise.resolve(null),
+    ]).then(([presupuesto, gastos]) => {
+      if (!vigente) return
+      setDatosEconomicos({
+        beca: presupuesto?.beca ?? null,
+        presupuestoMensual: presupuesto?.presupuesto_mensual ?? null,
+        gastosExtra: gastos?.total ?? 0,
+      })
+    })
+    return () => { vigente = false }
+  }, [emailUsuario, anioLectivo, semestreLectivo])
+
+  const configCosto = useMemo(
+    () => crearConfigCosto({ valorCredito, ...datosEconomicos }),
+    [valorCredito, datosEconomicos]
+  )
+  const creditosPorMateria = useMemo(
+    () => new Map(planMaterias.map((materia) => [materia.nombre?.trim(), Number(materia.creditos) || 0])),
+    [planMaterias]
+  )
 
   const horariosPorMateria = useMemo(() => agruparHorariosPorMateria(bloquesOferta), [bloquesOferta])
   const talleresOferta = useMemo(() => {
@@ -511,47 +546,23 @@ function PlanPage({ emailUsuario, onIr }) {
       return
     }
 
-    let mejorCantidad = -1
-    let nodos = 0
-    const limiteNodos = 12000
-    let mejores = []
-    const gruposIniciales = { ...gruposFijos }
-
-    function buscar(indice, grupos, bloques, cantidadAgregada) {
-      nodos += 1
-      if (nodos > limiteNodos || cantidadAgregada + materiasPorAgregar.length - indice < mejorCantidad) return
-      if (indice === materiasPorAgregar.length) {
-        if (pendientesObligatorias.size > 0 && [...pendientesObligatorias].some((nombre) => !grupos[nombre])) return
-        if (cantidadAgregada === 0) return
-        if (cantidadAgregada < mejorCantidad) return
-        if (cantidadAgregada > mejorCantidad) {
-          mejorCantidad = cantidadAgregada
-          mejores = []
-        }
-        mejores.push({ grupos: { ...gruposIniciales, ...grupos }, bloques: [...bloques] })
-        if (mejores.length >= 30) mejores = ordenarCombinacionesHorario(mejores).slice(0, 3)
-        return
-      }
-
-      const materia = materiasPorAgregar[indice]
-      const gruposMateria = Object.keys(materia.grupos)
-        .sort((a, b) => a.localeCompare(b, 'es', { numeric: true, sensitivity: 'base' }))
-      for (const grupo of gruposMateria) {
-        const nuevosBloques = (horariosPorMateria[materia.id].grupos[grupo] ?? [])
-          .map((bloque) => ({ ...bloque, materia: materia.id, grupo }))
-        const bloquesParciales = [...bloques, ...nuevosBloques]
-        if (detectarConflictosHorario(bloquesParciales).compatible) {
-          buscar(indice + 1, { ...grupos, [materia.id]: grupo }, bloquesParciales, cantidadAgregada + 1)
-        }
-      }
-      if (!pendientesObligatorias.has(materia.id)) buscar(indice + 1, grupos, bloques, cantidadAgregada)
-    }
-
-    buscar(0, {}, bloquesFijos, 0)
-    setOpcionesSeleccionAutomatica(ordenarCombinacionesHorario(mejores).slice(0, 3))
-    if (mejores.length === 0) {
+    const { opciones, estado, nodosExcedidos } = buscarOpcionesSeleccion({
+      materiasPorAgregar,
+      obligatorias: pendientesObligatorias,
+      gruposFijos,
+      bloquesFijos,
+      horariosPorMateria,
+      creditosPorMateria,
+      config: configCosto,
+    })
+    setOpcionesSeleccionAutomatica(opciones)
+    if (estado === 'fijas-exceden') {
+      setMensajeSeleccionAutomatica('Las materias que ya elegiste superan tu presupuesto del semestre. Quitá alguna o aumentá el presupuesto.')
+    } else if (estado === 'sin-presupuesto') {
+      setMensajeSeleccionAutomatica('Ninguna combinación entra en tu presupuesto del semestre. Te muestro la opción más barata, que se pasa del tope.')
+    } else if (estado === 'sin-opciones') {
       setMensajeSeleccionAutomatica('No encontré una combinación compatible con los bloques y materias seleccionados.')
-    } else if (nodos > limiteNodos) {
+    } else if (nodosExcedidos) {
       setMensajeSeleccionAutomatica('Mostrando las mejores opciones compatibles encontradas. Podés recalcular para buscar otras combinaciones.')
     }
   }
@@ -937,7 +948,10 @@ function PlanPage({ emailUsuario, onIr }) {
             <div className="seleccion-automatica-encabezado">
               <div>
                 <h2 id="seleccion-automatica-titulo">Opciones de selección automática</h2>
-                <p>Elegí una opción para aplicar sus materias y grupos. Se muestran hasta tres combinaciones compatibles.</p>
+                <p>
+                  Elegí una opción para aplicar sus materias y grupos. Se muestran hasta tres combinaciones compatibles
+                  {configCosto?.presupuestoSemestral != null ? ` que entran en tu presupuesto del semestre (${formatearMonto(configCosto.presupuestoSemestral)})` : ''}.
+                </p>
               </div>
               <button type="button" onClick={generarSeleccionAutomatica}>Recalcular</button>
             </div>
@@ -947,7 +961,8 @@ function PlanPage({ emailUsuario, onIr }) {
                 {opcionesSeleccionAutomatica.map((opcion, indice) => (
                   <li className={indice === 0 ? 'planificacion-alternativa-recomendada' : ''} key={JSON.stringify(opcion.grupos)}>
                     <h3>Opción {indice + 1}</h3>
-                    {indice === 0 && <span className="planificacion-recomendada">Más materias compatibles</span>}
+                    {indice === 0 && !opcion.fueraDePresupuesto && <span className="planificacion-recomendada">Más materias compatibles</span>}
+                    {opcion.fueraDePresupuesto && <span className="planificacion-recomendada">Opción más barata · se pasa del presupuesto</span>}
                     <ul>
                       {Object.entries(opcion.grupos).map(([materia, grupo]) => {
                         const horarios = opcion.bloques
@@ -956,6 +971,22 @@ function PlanPage({ emailUsuario, onIr }) {
                         return <li key={materia}><strong>{materia} · Grupo {grupo}</strong>{horarios.length > 0 && <span className="seleccion-automatica-horarios">{horarios.join(' · ')}</span>}</li>
                       })}
                     </ul>
+                    {configCosto && (() => {
+                      const creditos = Object.keys(opcion.grupos).reduce((suma, id) => suma + (creditosPorMateria.get(id) ?? 0), 0)
+                      const costo = calcularCostoSeleccion(creditos, configCosto)
+                      return (
+                        <p className="seleccion-automatica-costo">
+                          {creditos} créditos · Materias: {formatearMonto(costo.costoMaterias)}
+                          {costo.gastosExtra > 0 && ` + gastos extra ${formatearMonto(costo.gastosExtra)}`}
+                          {' = '}<strong>{formatearMonto(costo.costoFinal)}</strong>
+                          {costo.diferencia !== null && (
+                            costo.dentroDelPresupuesto
+                              ? ` · te sobran ${formatearMonto(costo.diferencia)}`
+                              : ` · te faltan ${formatearMonto(Math.abs(costo.diferencia))}`
+                          )}
+                        </p>
+                      )
+                    })()}
                     <button className="seleccion-automatica-aplicar" type="button" onClick={() => aceptarSeleccionAutomatica(opcion)}>
                       Aceptar opción
                     </button>

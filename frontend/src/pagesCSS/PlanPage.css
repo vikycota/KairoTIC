@@ -970,6 +970,7 @@
 .seleccion-automatica-opciones > ol { max-height: none; }
 .seleccion-automatica-opciones > ol > li > ul li { display: grid; gap: 3px; }
 .seleccion-automatica-horarios { color: #706b80; font-size: 11px; }
+.seleccion-automatica-costo { margin: 8px 0 0; color: #4a4560; font-size: 12px; }
 .seleccion-automatica-aplicar { margin-top: 10px; background: linear-gradient(90deg, var(--plan-violeta), #8b65db); color: #fff; }
 .planificacion-feedback { margin-top: 0; }
 
