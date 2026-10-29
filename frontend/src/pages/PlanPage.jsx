@@ -246,8 +246,8 @@ function PlanPage({ emailUsuario, onIr }) {
     if (!carrera || !emailUsuario) return undefined
     let vigente = true
     const clave = `${emailUsuario}|${carrera}`
-    const query = new URLSearchParams({ carrera, email: emailUsuario })
-    fetch(`/api/materias-habilitadas?${query}`)
+    const query = new URLSearchParams({ carrera })
+    apiFetch(`/api/materias-habilitadas?${query}`)
       .then(async (res) => {
         const json = await leerJson(res)
         if (!res.ok) throw new Error(json.error || 'No se pudo cargar tu estado académico.')

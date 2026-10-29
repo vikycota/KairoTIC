@@ -1,9 +1,11 @@
 from datetime import date
+import math
 
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, g, request, jsonify
 from psycopg2 import errors
 
 from conexion import obtener_conexion
+from auth import requiere_login
 from validaciones import ValidationError, validar_email
 
 horas_pasantia_bp = Blueprint("horas_pasantia", __name__)
@@ -12,6 +14,13 @@ HORAS_MAXIMAS_OBJETIVO = 10000
 HORAS_MAXIMAS_CARGA = 9999.99  # tope de la columna Horas_Pasantia.Horas (NUMERIC(6,2))
 
 _columna_objetivo_lista = False
+
+
+def _es_numero_finito(valor):
+    try:
+        return math.isfinite(float(valor))
+    except (OverflowError, TypeError, ValueError):
+        return False
 
 
 def _asegurar_columna_objetivo(conn):
@@ -29,11 +38,11 @@ def _asegurar_columna_objetivo(conn):
 
 
 def _parsear_fecha(valor, nombre_campo):
-    if not valor:
+    if not isinstance(valor, str) or not valor:
         raise ValidationError(f"El campo '{nombre_campo}' es obligatorio.")
     try:
         return date.fromisoformat(valor)
-    except ValueError:
+    except (TypeError, ValueError):
         raise ValidationError(f"El campo '{nombre_campo}' debe tener formato AAAA-MM-DD.")
 
 
@@ -41,7 +50,8 @@ def _calcular_horas(fecha_inicio, fecha_fin, horas_por_semana):
     if fecha_fin < fecha_inicio:
         raise ValidationError("La fecha de fin no puede ser anterior a la fecha de inicio.")
 
-    if not isinstance(horas_por_semana, (int, float)) or horas_por_semana <= 0:
+    if (isinstance(horas_por_semana, bool) or not isinstance(horas_por_semana, (int, float))
+            or not _es_numero_finito(horas_por_semana) or horas_por_semana <= 0):
         raise ValidationError("El campo 'horas_por_semana' debe ser un número mayor a 0.")
 
     dias_totales = (fecha_fin - fecha_inicio).days + 1  # inclusive
@@ -55,6 +65,7 @@ def _calcular_horas(fecha_inicio, fecha_fin, horas_por_semana):
 
 
 @horas_pasantia_bp.route("/pasantia/<int:pasantia_id>/horas", methods=["POST"])
+@requiere_login
 def cargar_horas(pasantia_id):
     data = request.get_json(silent=True)
     if not data:
@@ -62,7 +73,10 @@ def cargar_horas(pasantia_id):
 
     try:
         horas_por_semana = data.get("horas_por_semana")
-        descripcion = (data.get("descripcion") or "").strip()[:255]
+        descripcion = data.get("descripcion") or ""
+        if not isinstance(descripcion, str):
+            raise ValidationError("El campo 'descripcion' debe ser texto.")
+        descripcion = descripcion.strip()[:255]
         # Si no mandan fechas, se usa el período de la pasantía (ver más abajo).
         fecha_inicio = _parsear_fecha(data["fecha_inicio"], "fecha_inicio") if data.get("fecha_inicio") else None
         fecha_fin = _parsear_fecha(data["fecha_fin"], "fecha_fin") if data.get("fecha_fin") else None
@@ -77,7 +91,7 @@ def cargar_horas(pasantia_id):
         cur = conn.cursor()
 
         # Confirmamos que la pasantía exista antes de cargarle horas.
-        cur.execute("SELECT Email, Fecha_Inicio, Fecha_Fin FROM Pasantias WHERE Id = %s", (pasantia_id,))
+        cur.execute("SELECT Email, Fecha_Inicio, Fecha_Fin FROM Pasantias WHERE Id = %s AND Email = %s", (pasantia_id, g.email))
         fila = cur.fetchone()
         if not fila:
             cur.close()
@@ -165,6 +179,7 @@ def _obtener_progreso(cur, email):
 
 
 @horas_pasantia_bp.route("/pasantia/<int:pasantia_id>/horas-extra", methods=["POST"])
+@requiere_login
 def agregar_horas_extra(pasantia_id):
     """Suma horas a mano a una pasantía. Body: {"horas": 8, "descripcion"?: "..."}"""
     data = request.get_json(silent=True)
@@ -173,12 +188,16 @@ def agregar_horas_extra(pasantia_id):
 
     try:
         horas = data.get("horas")
-        if isinstance(horas, bool) or not isinstance(horas, (int, float)) or horas <= 0:
+        if (isinstance(horas, bool) or not isinstance(horas, (int, float))
+                or not _es_numero_finito(horas) or horas <= 0):
             raise ValidationError("El campo 'horas' debe ser un número mayor a 0.")
         horas = round(float(horas), 2)
         if horas <= 0 or horas > HORAS_MAXIMAS_CARGA:
             raise ValidationError(f"Las horas deben estar entre 0.01 y {HORAS_MAXIMAS_CARGA:g}.")
-        descripcion = (data.get("descripcion") or "").strip()[:255] or "Horas extra"
+        descripcion = data.get("descripcion") or ""
+        if not isinstance(descripcion, str):
+            raise ValidationError("El campo 'descripcion' debe ser texto.")
+        descripcion = descripcion.strip()[:255] or "Horas extra"
     except ValidationError as e:
         return jsonify({"error": e.message}), 400
 
@@ -188,7 +207,7 @@ def agregar_horas_extra(pasantia_id):
         _asegurar_columna_objetivo(conn)
         cur = conn.cursor()
 
-        cur.execute("SELECT Email FROM Pasantias WHERE Id = %s", (pasantia_id,))
+        cur.execute("SELECT Email FROM Pasantias WHERE Id = %s AND Email = %s", (pasantia_id, g.email))
         fila = cur.fetchone()
         if not fila:
             cur.close()
@@ -216,6 +235,7 @@ def agregar_horas_extra(pasantia_id):
 
 
 @horas_pasantia_bp.route("/persona/<string:email>/horas-objetivo-pasantia", methods=["PUT"])
+@requiere_login
 def definir_horas_objetivo(email):
     """Define cuántas horas de pasantía tiene que juntar la persona. Body: {"horas_objetivo": 200}"""
     data = request.get_json(silent=True)
@@ -224,6 +244,8 @@ def definir_horas_objetivo(email):
 
     try:
         email = validar_email(email)
+        if email != g.email:
+            return jsonify({"error": "No tenés permiso para modificar esta meta."}), 403
         objetivo = data.get("horas_objetivo")
         if isinstance(objetivo, bool) or not isinstance(objetivo, int) or not (1 <= objetivo <= HORAS_MAXIMAS_OBJETIVO):
             raise ValidationError(f"Las horas objetivo deben ser un número entero entre 1 y {HORAS_MAXIMAS_OBJETIVO}.")
@@ -259,9 +281,12 @@ def definir_horas_objetivo(email):
 
 
 @horas_pasantia_bp.route("/persona/<string:email>/progreso-pasantia", methods=["GET"])
+@requiere_login
 def progreso_pasantia(email):
     try:
         email = validar_email(email)
+        if email != g.email:
+            return jsonify({"error": "No tenés permiso para consultar este progreso."}), 403
     except ValidationError as e:
         return jsonify({"error": e.message}), 400
 

@@ -1,17 +1,18 @@
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, g, jsonify, request
 
+from auth import requiere_login
 from academic_service import obtener_estado_academico
 from conexion import obtener_conexion
-from validaciones import ValidationError, validar_email, validar_longitud, validar_no_vacio
+from validaciones import ValidationError, validar_longitud, validar_no_vacio
 
 
 academic_bp = Blueprint("academic", __name__)
 
 
 @academic_bp.route("/materias-habilitadas", methods=["GET"])
+@requiere_login
 def listar_materias_habilitadas():
     try:
-        email = validar_email(request.args.get("email"))
         carrera = validar_longitud(
             validar_no_vacio(request.args.get("carrera"), "carrera"),
             "carrera",
@@ -24,7 +25,13 @@ def listar_materias_habilitadas():
     try:
         conn = obtener_conexion()
         with conn.cursor() as cur:
-            estado = obtener_estado_academico(cur, email, carrera)
+            cur.execute(
+                "SELECT 1 FROM Pertenecen_A WHERE Email = %s AND Carreras_Nombre = %s",
+                (g.email, carrera),
+            )
+            if not cur.fetchone():
+                return jsonify({"error": "La carrera no está asociada a tu cuenta."}), 404
+            estado = obtener_estado_academico(cur, g.email, carrera)
         if estado is None:
             return jsonify({"error": "La carrera no existe."}), 404
         return jsonify(estado), 200

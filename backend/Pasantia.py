@@ -1,7 +1,8 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, g, request, jsonify
 from psycopg2 import errors
 import traceback
 from conexion import obtener_conexion
+from auth import requiere_login
 from validaciones import (
     ValidationError,
     validar_email,
@@ -14,6 +15,7 @@ pasantia_bp = Blueprint("pasantia", __name__)
 
 
 @pasantia_bp.route("/pasantia", methods=["POST"])
+@requiere_login
 def agregar_pasantia():
     data = request.get_json(silent=True)
     if not data:
@@ -21,6 +23,8 @@ def agregar_pasantia():
 
     try:
         email = validar_email(data.get("email"))
+        if email != g.email:
+            return jsonify({"error": "El email no coincide con la sesión."}), 403
 
         empresa = validar_no_vacio(data.get("empresa"), "empresa")
         empresa = validar_longitud(empresa, "empresa", minimo=2, maximo=150)
@@ -78,9 +82,12 @@ def agregar_pasantia():
 
 
 @pasantia_bp.route("/persona/<string:email>/pasantias", methods=["GET"])
+@requiere_login
 def listar_pasantias(email):
     try:
         email = validar_email(email)
+        if email != g.email:
+            return jsonify({"error": "No tenés permiso para consultar estas pasantías."}), 403
     except ValidationError as e:
         return jsonify({"error": e.message}), 400
 

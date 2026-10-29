@@ -1,5 +1,6 @@
 from flask import Blueprint, request, jsonify
 
+from auth import requiere_login
 from pdf_reader import extraer_texto_pdf
 from ollama import interpretar_plan_estudio
 
@@ -13,6 +14,7 @@ study_plan_bp = Blueprint(
     "/study-plan/import",
     methods=["POST"]
 )
+@requiere_login
 def importar_plan():
 
     if "pdf" not in request.files:

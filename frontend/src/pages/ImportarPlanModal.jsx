@@ -124,7 +124,7 @@ function ImportarPlanModal({ abierto, archivoInicial = null, onCerrar, onImporta
       const datos = new FormData()
       datos.append('pdf', archivo)
       try {
-        const res = await fetch('/api/study-plan/import', { method: 'POST', body: datos })
+        const res = await apiFetch('/api/study-plan/import', { method: 'POST', body: datos })
         const json = await leerJson(res)
         if (!vigente) return
         if (!res.ok) {

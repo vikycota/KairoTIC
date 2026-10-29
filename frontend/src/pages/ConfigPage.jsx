@@ -153,14 +153,27 @@ function ConfigPage({ usuario = { nombre: 'Viky', email: 'viky@correo.um.edu.uy'
           <div className="config-campos">
             <div className="config-campo">
               <label htmlFor="carreraCosto">Carrera</label>
-              <select id="carreraCosto" value={carrera} onChange={(e) => {
-                const seleccionada = carreras.find((item) => item.nombre === e.target.value)
-                setCarrera(e.target.value)
-                setCostoCredito(seleccionada?.valor_credito == null ? '' : String(seleccionada.valor_credito))
-              }} disabled={cargando || carreras.length === 0}>
-                <option value="">Seleccionar carrera</option>
-                {carreras.map((item) => <option key={item.nombre} value={item.nombre}>{item.nombre}</option>)}
-              </select>
+              <div className="config-select-wrapper">
+                <select
+                  id="carreraCosto"
+                  className="config-select"
+                  value={carrera}
+                  onChange={(e) => {
+                    const seleccionada = carreras.find((item) => item.nombre === e.target.value)
+                    setCarrera(e.target.value)
+                    setCostoCredito(seleccionada?.valor_credito == null ? '' : String(seleccionada.valor_credito))
+                  }}
+                  disabled={cargando || carreras.length === 0}
+                  aria-describedby="carreraCostoAyuda"
+                >
+                  <option value="">{cargando ? 'Cargando carreras…' : 'Seleccionar carrera'}</option>
+                  {carreras.map((item) => <option key={item.nombre} value={item.nombre}>{item.nombre}</option>)}
+                </select>
+                <span className="config-select-flecha" aria-hidden="true" />
+              </div>
+              <small className="config-campo-ayuda" id="carreraCostoAyuda">
+                {carreras.length ? 'El costo del crédito se guardará para esta carrera.' : 'Primero agregá una carrera desde Plan de estudio.'}
+              </small>
             </div>
 
             <div className="config-campo">

@@ -773,6 +773,9 @@ def importar():
             if error:
                 return error
 
+            if resultado is None:
+                return jsonify({"error": "No se pudo validar el plan recibido."}), 500
+
             if not resultado["valido"]:
 
                 return jsonify({
@@ -1060,7 +1063,8 @@ def eliminar_plan():
                 """,
                 (carrera, g.email),
             )
-            carrera_compartida = cur.fetchone()[0] > 0
+            fila_compartida = cur.fetchone()
+            carrera_compartida = bool(fila_compartida and fila_compartida[0] > 0)
 
             if carrera_compartida:
                 cur.execute(

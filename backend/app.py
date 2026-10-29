@@ -1,3 +1,5 @@
+import os
+
 from flask import Flask, jsonify
 from flask_cors import CORS
 
@@ -13,6 +15,7 @@ from HorasPasantia import horas_pasantia_bp
 from Costos import costos_bp
 
 app = Flask(__name__)
+app.config["MAX_CONTENT_LENGTH"] = 10 * 1024 * 1024
 
 # Cada blueprint se publica sin prefijo (Caddy quita /api antes de llegar acá)
 # y también bajo /api (el proxy de Vite en desarrollo lo reenvía tal cual).
@@ -20,7 +23,15 @@ for bp in (register_bp, login_bp, plan_bp, pasantia_bp, horas_pasantia_bp, mater
     app.register_blueprint(bp)
     app.register_blueprint(bp, url_prefix="/api", name=f"{bp.name}_api")
 
-CORS(app)
+origenes_cors = [
+    origen.strip()
+    for origen in os.environ.get(
+        "CORS_ORIGINS",
+        "http://localhost:5173,http://localhost:3000",
+    ).split(",")
+    if origen.strip()
+]
+CORS(app, origins=origenes_cors)
 
 
 @app.route("/", methods=["GET"])
