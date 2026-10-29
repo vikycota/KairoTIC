@@ -4,6 +4,11 @@
   Acá solo van los estilos propios (pa-*).
 */
 
+/* Colores de acento de esta pantalla: siguen el degradado elegido en Configuración. */
+:root { --pa-c1: #7c5cfc; --pa-c2: #de6ade; --pa-foco: #c46bef; }
+:root[data-degradado="azul-verde"] { --pa-c1: #0873a8; --pa-c2: #13a985; --pa-foco: #0873a8; }
+:root[data-degradado="rojo-naranja"] { --pa-c1: #bc243b; --pa-c2: #f28a24; --pa-foco: #bc243b; }
+
 .pg-datos.pa-datos { grid-template-columns: repeat(3, minmax(130px, 1fr)); }
 
 .pa-meta {
@@ -47,7 +52,7 @@
 
 .pg-page select:focus-visible,
 .pg-page textarea:focus-visible {
-  outline: 3px solid #c46bef;
+  outline: 3px solid var(--pa-foco);
   outline-offset: 2px;
 }
 
@@ -68,15 +73,45 @@
 
 .pa-item {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 14px;
+  flex-direction: column;
+  gap: 12px;
   padding: 12px 16px;
   border: 1px solid var(--borde);
   border-radius: 14px;
   background: #faf8ff;
   animation: pg-entra 0.35s ease both;
 }
+
+.pa-item-fila { display: flex; justify-content: space-between; align-items: center; gap: 14px; flex-wrap: wrap; }
+.pa-item-horas { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+
+.pa-extra {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px;
+  padding-top: 12px;
+  border-top: 1px dashed #d9d2f5;
+}
+.pa-extra .pa-campo { flex: 1 1 180px; }
+.pa-extra .pa-campo--chico { flex: 0 1 150px; }
+.pa-extra .pg-mensaje { flex-basis: 100%; margin: 0; }
+.pa-extra-botones,
+.pa-meta-botones { display: flex; gap: 8px; flex-wrap: wrap; }
+
+.pa-meta-form { flex-basis: 100%; display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px; }
+.pa-editar-meta { align-self: flex-start; }
+.pg-resumen > .pg-mensaje { flex-basis: 100%; margin: 0; }
+
+.pa-periodo {
+  margin: 0;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: #f4f0ff;
+  color: var(--suave);
+  font-size: 14px;
+}
+.pa-periodo strong { color: var(--violeta); }
 
 .pa-item-principal { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
 .pa-item-principal strong { color: var(--violeta); font: 600 15px 'Sora', sans-serif; overflow-wrap: anywhere; }
@@ -87,7 +122,7 @@
   flex-shrink: 0;
   padding: 6px 12px;
   border-radius: 10px;
-  background: linear-gradient(90deg, #7c5cfc, #de6ade);
+  background: linear-gradient(90deg, var(--pa-c1), var(--pa-c2));
   color: #fff;
   font: 700 14px 'Sora', sans-serif;
 }
@@ -97,7 +132,9 @@
 :root[data-tema="oscuro"] .pa-campo select,
 :root[data-tema="oscuro"] .pa-campo textarea { background-color: #1c1a25; border-color: #494357; color: #eeeaf7; }
 :root[data-tema="oscuro"] .pa-item,
-:root[data-tema="oscuro"] .pa-calculo { background-color: #302c3c; border-color: #494357; }
+:root[data-tema="oscuro"] .pa-calculo,
+:root[data-tema="oscuro"] .pa-periodo { background-color: #302c3c; border-color: #494357; }
+:root[data-tema="oscuro"] .pa-extra { border-top-color: #494357; }
 :root[data-tema="oscuro"] .pa-meta { background: #1e3a2f; color: #bdf0d6; }
 
 @media (max-width: 860px) {
