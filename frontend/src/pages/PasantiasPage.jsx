@@ -5,7 +5,6 @@ import '../pagesCSS/PasantiasPage.css'
 
 const RADIO = 54
 const CIRCUNFERENCIA = 2 * Math.PI * RADIO
-const HORAS_OBJETIVO = 150
 
 async function leerJson(res) {
   try {
@@ -28,6 +27,11 @@ function formatearFecha(iso) {
   return `${dia}/${mes}/${anio}`
 }
 
+function hoyISO() {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
 // Misma regla que el servidor: (días entre las fechas, inclusive / 7) × horas por semana.
 function calcularHoras(inicio, fin, horasPorSemana) {
   if (!inicio || !fin || !(horasPorSemana > 0)) return null
@@ -36,15 +40,15 @@ function calcularHoras(inicio, fin, horasPorSemana) {
   return Math.round((dias / 7) * horasPorSemana * 100) / 100
 }
 
-function Anillo({ porcentaje }) {
+function Anillo({ porcentaje, objetivo }) {
   const n = useContador(Math.round(porcentaje))
   return (
     <div className="pg-anillo" role="progressbar" aria-valuenow={Math.round(porcentaje)} aria-valuemin={0} aria-valuemax={100} aria-label="Avance de las horas de pasantía">
       <svg viewBox="0 0 132 132" aria-hidden="true">
         <defs>
           <linearGradient id="pg-grad" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0%" stopColor="#7c5cfc" />
-            <stop offset="100%" stopColor="#de6ade" />
+            <stop offset="0%" style={{ stopColor: 'var(--pa-c1)' }} />
+            <stop offset="100%" style={{ stopColor: 'var(--pa-c2)' }} />
           </linearGradient>
         </defs>
         <circle cx="66" cy="66" r={RADIO} className="pg-anillo-fondo" />
@@ -59,7 +63,7 @@ function Anillo({ porcentaje }) {
       </svg>
       <div className="pg-anillo-texto">
         <strong>{n}%</strong>
-        <span>de {HORAS_OBJETIVO} horas</span>
+        <span>{objetivo ? `de ${formatearHoras(objetivo)} horas` : 'sin meta definida'}</span>
       </div>
     </div>
   )
@@ -68,14 +72,15 @@ function Anillo({ porcentaje }) {
 function Dato({ valor, etiqueta }) {
   return (
     <div className="pg-dato">
-      <strong>{formatearHoras(valor)}</strong>
+      <strong>{typeof valor === 'number' ? formatearHoras(valor) : valor}</strong>
       <span>{etiqueta}</span>
     </div>
   )
 }
 
 const FORM_PASANTIA_VACIO = { empresa: '', fecha_inicio: '', fecha_fin: '', creditos: '0', descripcion: '' }
-const FORM_HORAS_VACIO = { pasantia_id: '', fecha_inicio: '', fecha_fin: '', horas_por_semana: '20', descripcion: '' }
+const FORM_HORAS_VACIO = { pasantia_id: '', horas_por_semana: '20', descripcion: '' }
+const FORM_EXTRA_VACIO = { horas: '', descripcion: '' }
 
 function PasantiasPage({ emailUsuario }) {
   const [pasantias, setPasantias] = useState([])
@@ -91,6 +96,16 @@ function PasantiasPage({ emailUsuario }) {
   const [formHoras, setFormHoras] = useState(FORM_HORAS_VACIO)
   const [guardandoHoras, setGuardandoHoras] = useState(false)
   const [mensajeHoras, setMensajeHoras] = useState(null)
+
+  const [editandoMeta, setEditandoMeta] = useState(false)
+  const [metaInput, setMetaInput] = useState('')
+  const [guardandoMeta, setGuardandoMeta] = useState(false)
+  const [mensajeMeta, setMensajeMeta] = useState(null)
+
+  const [extraAbierta, setExtraAbierta] = useState(null)
+  const [formExtra, setFormExtra] = useState(FORM_EXTRA_VACIO)
+  const [guardandoExtra, setGuardandoExtra] = useState(false)
+  const [mensajeExtra, setMensajeExtra] = useState(null)
 
   const email = encodeURIComponent(emailUsuario ?? '')
 
@@ -120,14 +135,21 @@ function PasantiasPage({ emailUsuario }) {
     ? formHoras.pasantia_id
     : String(pasantias[0]?.id ?? '')
 
+  // El período sale de la pasantía elegida; si sigue en curso (sin fecha de fin) se cuenta hasta hoy.
+  const pasantiaActual = pasantias.find((p) => String(p.id) === pasantiaElegida)
+  const periodoInicio = pasantiaActual?.fecha_inicio ?? ''
+  const periodoFin = pasantiaActual ? pasantiaActual.fecha_fin ?? hoyISO() : ''
+
   const horasCalculadas = useMemo(
-    () => calcularHoras(formHoras.fecha_inicio, formHoras.fecha_fin, Number(formHoras.horas_por_semana)),
-    [formHoras.fecha_inicio, formHoras.fecha_fin, formHoras.horas_por_semana]
+    () => calcularHoras(periodoInicio, periodoFin, Number(formHoras.horas_por_semana)),
+    [periodoInicio, periodoFin, formHoras.horas_por_semana]
   )
 
   const horasTotales = progreso?.horas_totales ?? 0
+  const objetivo = progreso?.horas_objetivo ?? null
   const porcentaje = progreso?.porcentaje ?? 0
-  const horasFaltantes = progreso?.horas_faltantes ?? HORAS_OBJETIVO
+  const horasFaltantes = progreso?.horas_faltantes ?? 0
+  const mostrarFormMeta = editandoMeta || (!cargando && !errorCarga && !objetivo)
 
   function cambiarPasantia(campo, valor) {
     setFormPasantia((actual) => ({ ...actual, [campo]: valor }))
@@ -173,21 +195,88 @@ function PasantiasPage({ emailUsuario }) {
     setGuardandoPasantia(false)
   }
 
+  function empezarEditarMeta() {
+    setMetaInput(objetivo ? String(objetivo) : '')
+    setMensajeMeta(null)
+    setEditandoMeta(true)
+  }
+
+  async function guardarMeta(e) {
+    e.preventDefault()
+    setMensajeMeta(null)
+    const valor = Number(metaInput)
+    if (!Number.isInteger(valor) || valor < 1 || valor > 10000) {
+      setMensajeMeta({ tipo: 'error', texto: 'Ingresá un número entero de horas entre 1 y 10000.' })
+      return
+    }
+    setGuardandoMeta(true)
+    try {
+      const res = await apiFetch(`/api/persona/${email}/horas-objetivo-pasantia`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ horas_objetivo: valor }),
+      })
+      const json = await leerJson(res)
+      if (res.ok) {
+        setEditandoMeta(false)
+        setMetaInput('')
+        setRevision((actual) => actual + 1)
+      } else {
+        setMensajeMeta({ tipo: 'error', texto: mensajeDe(res, json, 'No se pudo guardar la meta.') })
+      }
+    } catch {
+      setMensajeMeta({ tipo: 'error', texto: 'No se pudo conectar con el servidor.' })
+    }
+    setGuardandoMeta(false)
+  }
+
+  function abrirExtra(id) {
+    setMensajeExtra(null)
+    setFormExtra(FORM_EXTRA_VACIO)
+    setExtraAbierta(id)
+  }
+
+  async function agregarExtra(e) {
+    e.preventDefault()
+    setMensajeExtra(null)
+    const horas = Number(formExtra.horas)
+    if (!(horas > 0)) {
+      setMensajeExtra({ tipo: 'error', texto: 'Ingresá una cantidad de horas mayor a 0.' })
+      return
+    }
+    setGuardandoExtra(true)
+    try {
+      const res = await apiFetch(`/api/pasantia/${extraAbierta}/horas-extra`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ horas, descripcion: formExtra.descripcion }),
+      })
+      const json = await leerJson(res)
+      if (res.ok) {
+        setMensajeHoras({ tipo: 'ok', texto: `Se sumaron ${formatearHoras(json.horas_agregadas)} horas extra a tu progreso.` })
+        setExtraAbierta(null)
+        setFormExtra(FORM_EXTRA_VACIO)
+        setRevision((actual) => actual + 1)
+      } else {
+        setMensajeExtra({ tipo: 'error', texto: mensajeDe(res, json, 'No se pudieron agregar las horas.') })
+      }
+    } catch {
+      setMensajeExtra({ tipo: 'error', texto: 'No se pudo conectar con el servidor.' })
+    }
+    setGuardandoExtra(false)
+  }
+
   async function cargarHoras(e) {
     e.preventDefault()
     setMensajeHoras(null)
-    if (formHoras.fecha_fin < formHoras.fecha_inicio) {
-      setMensajeHoras({ tipo: 'error', texto: 'La fecha de fin no puede ser anterior a la de inicio.' })
-      return
-    }
     setGuardandoHoras(true)
     try {
       const res = await apiFetch(`/api/pasantia/${pasantiaElegida}/horas`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          fecha_inicio: formHoras.fecha_inicio,
-          fecha_fin: formHoras.fecha_fin,
+          fecha_inicio: periodoInicio,
+          fecha_fin: periodoFin,
           horas_por_semana: Number(formHoras.horas_por_semana),
           descripcion: formHoras.descripcion,
         }),
@@ -213,21 +302,48 @@ function PasantiasPage({ emailUsuario }) {
         <span className="pg-blob pg-blob--2" aria-hidden="true" />
         <span className="pg-etiqueta">Pasantías</span>
         <h1>Tus horas de pasantía</h1>
-        <p>Cargá el período y las horas por semana: calculamos el total y lo sumamos a tu avance hacia las {HORAS_OBJETIVO} horas.</p>
+        <p>Registrá tus pasantías y las horas por semana: calculamos el total y lo sumamos a tu avance hacia tu meta de horas.</p>
       </header>
 
       <div className="pg-contenido">
         {errorCarga && <p className="pg-mensaje pg-mensaje--error" role="alert">{errorCarga}</p>}
 
         <section className="pg-resumen" aria-label="Progreso de horas">
-          <Anillo porcentaje={porcentaje} />
+          <Anillo porcentaje={porcentaje} objetivo={objetivo} />
           <div className="pg-datos pa-datos">
             <Dato valor={horasTotales} etiqueta="horas cargadas" />
-            <Dato valor={horasFaltantes} etiqueta={`horas faltan para las ${HORAS_OBJETIVO}`} />
+            {objetivo
+              ? <Dato valor={horasFaltantes} etiqueta={`horas faltan para las ${formatearHoras(objetivo)}`} />
+              : <Dato valor="—" etiqueta="definí tu meta de horas" />}
             <Dato valor={pasantias.length} etiqueta={pasantias.length === 1 ? 'pasantía registrada' : 'pasantías registradas'} />
           </div>
-          {horasFaltantes === 0 && !cargando && (
-            <p className="pa-meta">¡Completaste las {HORAS_OBJETIVO} horas de pasantía!</p>
+          {objetivo && horasFaltantes === 0 && !cargando && (
+            <p className="pa-meta">¡Completaste las {formatearHoras(objetivo)} horas de pasantía!</p>
+          )}
+          {mostrarFormMeta ? (
+            <form className="pa-meta-form" onSubmit={guardarMeta}>
+              <label className="pa-campo pa-campo--chico">
+                {objetivo ? 'Horas de pasantía a cumplir' : '¿Cuántas horas de pasantía tenés que cumplir?'}
+                <input type="number" required min="1" max="10000" step="1" placeholder="Ej: 150" value={metaInput} onChange={(e) => setMetaInput(e.target.value)} />
+              </label>
+              <div className="pa-meta-botones">
+                <button type="submit" className="pg-btn pg-btn--primario pg-btn--chico" disabled={guardandoMeta}>
+                  {guardandoMeta ? 'Guardando…' : 'Guardar meta'}
+                </button>
+                {objetivo && (
+                  <button type="button" className="pg-btn pg-btn--claro pg-btn--chico" onClick={() => setEditandoMeta(false)}>Cancelar</button>
+                )}
+              </div>
+            </form>
+          ) : (
+            objetivo && (
+              <button type="button" className="pg-btn pg-btn--claro pg-btn--chico pa-editar-meta" onClick={empezarEditarMeta}>
+                Editar meta de horas
+              </button>
+            )
+          )}
+          {mensajeMeta && (
+            <p className={`pg-mensaje pg-mensaje--${mensajeMeta.tipo}`} role={mensajeMeta.tipo === 'error' ? 'alert' : 'status'}>{mensajeMeta.texto}</p>
           )}
         </section>
 
@@ -275,7 +391,7 @@ function PasantiasPage({ emailUsuario }) {
             <div className="pg-panel-cabecera">
               <div>
                 <h2 id="pa-titulo-horas">Cargar horas</h2>
-                <p>Horas = (días del período ÷ 7) × horas por semana.</p>
+                <p>Usamos el período de la pasantía: horas = (días ÷ 7) × horas por semana.</p>
               </div>
             </div>
             {pasantias.length === 0 ? (
@@ -290,16 +406,9 @@ function PasantiasPage({ emailUsuario }) {
                     ))}
                   </select>
                 </label>
-                <div className="pa-fila">
-                  <label className="pa-campo">
-                    Desde
-                    <input type="date" required value={formHoras.fecha_inicio} onChange={(e) => cambiarHoras('fecha_inicio', e.target.value)} />
-                  </label>
-                  <label className="pa-campo">
-                    Hasta
-                    <input type="date" required min={formHoras.fecha_inicio || undefined} value={formHoras.fecha_fin} onChange={(e) => cambiarHoras('fecha_fin', e.target.value)} />
-                  </label>
-                </div>
+                <p className="pa-periodo">
+                  Período: <strong>{formatearFecha(periodoInicio)} – {pasantiaActual?.fecha_fin ? formatearFecha(periodoFin) : 'hoy (en curso)'}</strong>
+                </p>
                 <label className="pa-campo pa-campo--chico">
                   Horas por semana
                   <input type="number" required min="0.5" step="0.5" value={formHoras.horas_por_semana} onChange={(e) => cambiarHoras('horas_por_semana', e.target.value)} />
@@ -310,7 +419,7 @@ function PasantiasPage({ emailUsuario }) {
                 </label>
                 <p className="pa-calculo" aria-live="polite">
                   {horasCalculadas === null
-                    ? 'Completá las fechas para ver cuántas horas se van a sumar.'
+                    ? 'Revisá las horas por semana para ver cuántas horas se van a sumar.'
                     : <>Se van a sumar <strong>{formatearHoras(horasCalculadas)} horas</strong>.</>}
                 </p>
                 {mensajeHoras && (
@@ -328,7 +437,7 @@ function PasantiasPage({ emailUsuario }) {
           <div className="pg-panel-cabecera">
             <div>
               <h2 id="pa-titulo-lista">Mis pasantías</h2>
-              <p>Las horas acumuladas de cada una se suman en tu total.</p>
+              <p>Las horas acumuladas de cada una se suman en tu total. Con «Agregar horas extra» sumás horas a mano.</p>
             </div>
           </div>
           {pasantias.length === 0 ? (
@@ -337,15 +446,48 @@ function PasantiasPage({ emailUsuario }) {
             <ul className="pa-lista">
               {pasantias.map((p) => (
                 <li key={p.id} className="pa-item">
-                  <div className="pa-item-principal">
-                    <strong>{p.empresa}</strong>
-                    <span>
-                      {formatearFecha(p.fecha_inicio)} – {p.fecha_fin ? formatearFecha(p.fecha_fin) : 'en curso'}
-                      {p.creditos > 0 ? ` · ${p.creditos} ${p.creditos === 1 ? 'crédito' : 'créditos'}` : ''}
-                    </span>
-                    {p.descripcion && <small>{p.descripcion}</small>}
+                  <div className="pa-item-fila">
+                    <div className="pa-item-principal">
+                      <strong>{p.empresa}</strong>
+                      <span>
+                        {formatearFecha(p.fecha_inicio)} – {p.fecha_fin ? formatearFecha(p.fecha_fin) : 'en curso'}
+                        {p.creditos > 0 ? ` · ${p.creditos} ${p.creditos === 1 ? 'crédito' : 'créditos'}` : ''}
+                      </span>
+                      {p.descripcion && <small>{p.descripcion}</small>}
+                    </div>
+                    <div className="pa-item-horas">
+                      <b className="pa-horas">{formatearHoras(p.horas_totales)} h</b>
+                      <button
+                        type="button"
+                        className="pg-btn pg-btn--claro pg-btn--chico"
+                        aria-expanded={extraAbierta === p.id}
+                        onClick={() => (extraAbierta === p.id ? setExtraAbierta(null) : abrirExtra(p.id))}
+                      >
+                        Agregar horas extra
+                      </button>
+                    </div>
                   </div>
-                  <b className="pa-horas">{formatearHoras(p.horas_totales)} h</b>
+                  {extraAbierta === p.id && (
+                    <form className="pa-extra" onSubmit={agregarExtra}>
+                      <label className="pa-campo pa-campo--chico">
+                        Horas a sumar
+                        <input type="number" required min="0.25" max="9999" step="0.25" autoFocus value={formExtra.horas} onChange={(e) => setFormExtra((actual) => ({ ...actual, horas: e.target.value }))} />
+                      </label>
+                      <label className="pa-campo">
+                        Descripción <small>(opcional)</small>
+                        <input type="text" maxLength={255} placeholder="Ej: guardia de fin de semana" value={formExtra.descripcion} onChange={(e) => setFormExtra((actual) => ({ ...actual, descripcion: e.target.value }))} />
+                      </label>
+                      {mensajeExtra && (
+                        <p className={`pg-mensaje pg-mensaje--${mensajeExtra.tipo}`} role={mensajeExtra.tipo === 'error' ? 'alert' : 'status'}>{mensajeExtra.texto}</p>
+                      )}
+                      <div className="pa-extra-botones">
+                        <button type="submit" className="pg-btn pg-btn--primario pg-btn--chico" disabled={guardandoExtra}>
+                          {guardandoExtra ? 'Guardando…' : 'Sumar horas'}
+                        </button>
+                        <button type="button" className="pg-btn pg-btn--claro pg-btn--chico" onClick={() => setExtraAbierta(null)}>Cancelar</button>
+                      </div>
+                    </form>
+                  )}
                 </li>
               ))}
             </ul>
