@@ -1,0 +1,62 @@
+.cal-pago-mensual {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 22px;
+  border: 1px solid var(--borde);
+  border-radius: 18px;
+  background: #fff;
+  color: var(--texto);
+  box-shadow: 0 10px 30px rgba(32, 0, 100, 0.08);
+}
+
+.cal-pago-mensual span {
+  display: block;
+  color: var(--suave);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.cal-pago-mensual p {
+  margin: 5px 0 0;
+  color: var(--suave);
+  font-size: 13px;
+}
+
+.cal-pago-mensual > strong {
+  color: var(--violeta);
+  font: 700 clamp(22px, 3vw, 30px) 'Sora', 'Inter', sans-serif;
+  text-align: right;
+}
+
+:root[data-tema='oscuro'] .cal-pago-mensual {
+  border-color: #393447;
+  background: #24212f;
+  color: #eeeaf7;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.16);
+}
+
+:root[data-tema='oscuro'] .cal-pago-mensual > strong {
+  color: #d7c9ff;
+}
+
+:root[data-tema='oscuro'][data-degradado='azul-verde'] .cal-pago-mensual > strong {
+  color: #13a985;
+}
+
+:root[data-tema='oscuro'][data-degradado='rojo-naranja'] .cal-pago-mensual > strong {
+  color: #f28a24;
+}
+
+@media (max-width: 560px) {
+  .cal-pago-mensual {
+    align-items: flex-start;
+    flex-direction: column;
+    padding: 16px;
+  }
+
+  .cal-pago-mensual > strong {
+    text-align: left;
+  }
+}

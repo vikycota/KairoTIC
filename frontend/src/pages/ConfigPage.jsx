@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { apiFetch } from '../api'
 
 function iniciales(nombre) {
   return nombre
@@ -13,17 +14,59 @@ function ConfigPage({ usuario = { nombre: 'Viky', email: 'viky@correo.um.edu.uy'
   const [costoCredito, setCostoCredito] = useState('')
   const [beca, setBeca] = useState('')
   const [presupuesto, setPresupuesto] = useState('')
+  const [carrera, setCarrera] = useState('')
+  const [carreras, setCarreras] = useState([])
+  const [cargando, setCargando] = useState(true)
+  const [guardando, setGuardando] = useState(false)
+  const [error, setError] = useState('')
   const [guardado, setGuardado] = useState(false)
 
-  function manejarGuardar(e) {
-    e.preventDefault()
-    onGuardar?.({
-      costoCredito: Number(costoCredito) || 0,
-      beca: Number(beca) || 0,
-      presupuesto: Number(presupuesto) || 0,
+  useEffect(() => {
+    let vigente = true
+    Promise.all([
+      apiFetch('/api/presupuesto').then((res) => (res.ok ? res.json() : null)).catch(() => null),
+      apiFetch('/api/carreras').then((res) => (res.ok ? res.json() : null)).catch(() => null),
+    ]).then(([presupuestoGuardado, carrerasGuardadas]) => {
+      if (!vigente) return
+      setPresupuesto(presupuestoGuardado?.presupuesto_mensual == null ? '' : String(presupuestoGuardado.presupuesto_mensual))
+      setBeca(presupuestoGuardado?.beca == null ? '' : String(presupuestoGuardado.beca))
+      const disponibles = carrerasGuardadas?.carreras ?? []
+      setCarreras(disponibles)
+      setCarrera(disponibles[0]?.nombre ?? '')
+      setCostoCredito(disponibles[0]?.valor_credito == null ? '' : String(disponibles[0].valor_credito))
+      setCargando(false)
     })
-    setGuardado(true)
-    setTimeout(() => setGuardado(false), 2000)
+    return () => { vigente = false }
+  }, [])
+
+  async function manejarGuardar(e) {
+    e.preventDefault()
+    setError('')
+    if (costoCredito !== '' && !carrera) {
+      setError('Elegí una carrera para guardar el costo del crédito.')
+      return
+    }
+    setGuardando(true)
+    try {
+      const res = await apiFetch('/api/presupuesto', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          presupuesto_mensual: presupuesto === '' ? null : Number(presupuesto),
+          beca: beca === '' ? 0 : Number(beca),
+          ...(costoCredito === '' ? {} : { costo_credito: Number(costoCredito), carrera }),
+        }),
+      })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(json.error || 'No se pudieron guardar los datos.')
+      onGuardar?.({ costoCredito: Number(costoCredito) || 0, beca: Number(beca) || 0, presupuesto: Number(presupuesto) || 0 })
+      setGuardado(true)
+      setTimeout(() => setGuardado(false), 2000)
+    } catch (e) {
+      setError(e.message || 'No se pudieron guardar los datos.')
+    } finally {
+      setGuardando(false)
+    }
   }
 
   return (
@@ -109,6 +152,18 @@ function ConfigPage({ usuario = { nombre: 'Viky', email: 'viky@correo.um.edu.uy'
 
           <div className="config-campos">
             <div className="config-campo">
+              <label htmlFor="carreraCosto">Carrera</label>
+              <select id="carreraCosto" value={carrera} onChange={(e) => {
+                const seleccionada = carreras.find((item) => item.nombre === e.target.value)
+                setCarrera(e.target.value)
+                setCostoCredito(seleccionada?.valor_credito == null ? '' : String(seleccionada.valor_credito))
+              }} disabled={cargando || carreras.length === 0}>
+                <option value="">Seleccionar carrera</option>
+                {carreras.map((item) => <option key={item.nombre} value={item.nombre}>{item.nombre}</option>)}
+              </select>
+            </div>
+
+            <div className="config-campo">
               <label htmlFor="costoCredito">Costo del crédito</label>
               <div className="config-input-wrapper">
                 <span className="config-input-prefijo">$</span>
@@ -133,7 +188,8 @@ function ConfigPage({ usuario = { nombre: 'Viky', email: 'viky@correo.um.edu.uy'
             </div>
           </div>
 
-          <button className="config-guardar" type="submit">
+          {error && <p className="config-error" role="alert">{error}</p>}
+          <button className="config-guardar" type="submit" disabled={guardando || cargando}>
             {guardado ? 'Guardado ✓' : 'Guardar cambios'}
           </button>
         </form>

@@ -153,6 +153,8 @@ function PlanPage({ emailUsuario, onIr }) {
   const [mostrarAgregarBloque, setMostrarAgregarBloque] = useState(false)
   const [opcionesSeleccionAutomatica, setOpcionesSeleccionAutomatica] = useState([])
   const [mensajeSeleccionAutomatica, setMensajeSeleccionAutomatica] = useState('')
+  const [mostrarPreguntaPresupuesto, setMostrarPreguntaPresupuesto] = useState(false)
+  const [presupuestoEnRecomendacion, setPresupuestoEnRecomendacion] = useState(false)
   const [errorBloqueManual, setErrorBloqueManual] = useState('')
   const [bloqueManualNuevo, setBloqueManualNuevo] = useState({ nombre: '', dia: 'Lunes', hora_inicio: '08:00', hora_fin: '09:00', repeticion: 'semanal', fecha_inicio: '' })
   const [planificacion, setPlanificacion] = useState(estadoPlanInicial.planificacion)
@@ -494,6 +496,10 @@ function PlanPage({ emailUsuario, onIr }) {
             carrera,
             anio_lectivo: String(anioLectivo),
             semestre_lectivo: String(semestreLectivo),
+            valor_credito: valorCredito,
+            creditos_materias: Object.fromEntries(
+              planMaterias.map(({ nombre, creditos }) => [nombre.trim(), Number(creditos) || 0])
+            ),
             bloques,
             bloques_planificacion: planificacion.bloques,
             materias_seleccionadas: Object.fromEntries(
@@ -508,6 +514,7 @@ function PlanPage({ emailUsuario, onIr }) {
         },
       }
       localStorage.setItem(clave, JSON.stringify(siguiente))
+      window.dispatchEvent(new Event('kairo-planificacion-actualizada'))
       setMensajeGuardar('Semestre guardado. Abriendo Calendario…')
       onIr?.('calendario')
     } catch {
@@ -515,7 +522,13 @@ function PlanPage({ emailUsuario, onIr }) {
     }
   }
 
-  function generarSeleccionAutomatica() {
+  function solicitarSeleccionAutomatica() {
+    setMostrarPreguntaPresupuesto(true)
+  }
+
+  function generarSeleccionAutomatica(considerarPresupuesto = false) {
+    setMostrarPreguntaPresupuesto(false)
+    setPresupuestoEnRecomendacion(considerarPresupuesto)
     setMensajeSeleccionAutomatica('')
     const seleccionadas = Object.entries(materiasSeleccionadas)
       .filter(([, estado]) => estado.seleccionada)
@@ -553,7 +566,7 @@ function PlanPage({ emailUsuario, onIr }) {
       bloquesFijos,
       horariosPorMateria,
       creditosPorMateria,
-      config: configCosto,
+      config: considerarPresupuesto ? configCosto : null,
     })
     setOpcionesSeleccionAutomatica(opciones)
     if (estado === 'fijas-exceden') {
@@ -858,7 +871,7 @@ function PlanPage({ emailUsuario, onIr }) {
             <button
               className="seleccion-automatica-button"
               type="button"
-              onClick={generarSeleccionAutomatica}
+              onClick={solicitarSeleccionAutomatica}
               disabled={cargandoCarreras || cargandoPlan || cargandoHorarios || cargandoEstado}
             >
               {opcionesSeleccionAutomatica.length ? 'Recalcular opciones' : 'Selección automática'}
@@ -873,6 +886,16 @@ function PlanPage({ emailUsuario, onIr }) {
             </button>
 
           </div>
+
+          {mostrarPreguntaPresupuesto && (
+            <div className="seleccion-automatica-pregunta" role="dialog" aria-labelledby="pregunta-presupuesto-titulo">
+              <p id="pregunta-presupuesto-titulo">¿Querés tener en cuenta tu presupuesto para recomendar la cantidad de materias?</p>
+              <div className="seleccion-automatica-pregunta-acciones">
+                <button type="button" onClick={() => generarSeleccionAutomatica(true)}>Sí, tenerlo en cuenta</button>
+                <button type="button" onClick={() => generarSeleccionAutomatica(false)}>No, recomendar sin presupuesto</button>
+              </div>
+            </div>
+          )}
 
         </header>
 
@@ -950,10 +973,10 @@ function PlanPage({ emailUsuario, onIr }) {
                 <h2 id="seleccion-automatica-titulo">Opciones de selección automática</h2>
                 <p>
                   Elegí una opción para aplicar sus materias y grupos. Se muestran hasta tres combinaciones compatibles
-                  {configCosto?.presupuestoSemestral != null ? ` que entran en tu presupuesto del semestre (${formatearMonto(configCosto.presupuestoSemestral)})` : ''}.
+                  {presupuestoEnRecomendacion && configCosto?.presupuestoSemestral != null ? ` que entran en tu presupuesto del semestre (${formatearMonto(configCosto.presupuestoSemestral)})` : ' compatibles con tus horarios'}.
                 </p>
               </div>
-              <button type="button" onClick={generarSeleccionAutomatica}>Recalcular</button>
+              <button type="button" onClick={solicitarSeleccionAutomatica}>Recalcular</button>
             </div>
             {mensajeSeleccionAutomatica && <p className="seleccion-automatica-mensaje" role="status">{mensajeSeleccionAutomatica}</p>}
             {opcionesSeleccionAutomatica.length > 0 && (

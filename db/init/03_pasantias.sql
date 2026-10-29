@@ -1,4 +1,4 @@
-CREATE TABLE Pasantias (
+CREATE TABLE IF NOT EXISTS Pasantias (
     Id              SERIAL          PRIMARY KEY,
     Email           VARCHAR(150)    NOT NULL,
     Empresa         VARCHAR(150)    NOT NULL,

@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useContador } from '../useContador'
+import { apiFetch } from '../api'
+import { calcularCostoSeleccion, crearConfigCosto, etiquetaSemestre, formatearMonto } from './costosSemestre'
 import '../pagesCSS/Calendario.css'
+import '../pagesCSS/CalendarioPago.css'
 
 const DIAS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom']
 const DIAS_LARGOS = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo']
@@ -149,12 +152,48 @@ function WeeklyPlanner({ emailUsuario, onIr }) {
   const [panel, setPanel] = useState(null)       // { tipo: 'ver', evento } | { tipo: 'form', borrador }
   const [error, setError] = useState('')
   const [ahora, setAhora] = useState(() => new Date())
+  const [pagoMensual, setPagoMensual] = useState(null)
+  const [cargandoPago, setCargandoPago] = useState(false)
+  const [revisionPlan, setRevisionPlan] = useState(0)
+  useEffect(() => {
+    const actualizarPlan = () => setRevisionPlan((revision) => revision + 1)
+    window.addEventListener('kairo-planificacion-actualizada', actualizarPlan)
+    return () => window.removeEventListener('kairo-planificacion-actualizada', actualizarPlan)
+  }, [])
 
   // El último plan guardado se muestra en el calendario; si no existe, se usan las cargas.
   const planGuardado = useMemo(() => {
     const guardado = leerStorage(`kairo-planificaciones:${emailUsuario}`)
     return guardado?.por_periodo?.[guardado.activo] ?? null
-  }, [emailUsuario])
+  }, [emailUsuario, revisionPlan])
+  useEffect(() => {
+    if (!emailUsuario || !planGuardado) {
+      setPagoMensual(null)
+      setCargandoPago(false)
+      return undefined
+    }
+    let vigente = true
+    setCargandoPago(true)
+    const semestre = etiquetaSemestre(planGuardado.anio_lectivo, planGuardado.semestre_lectivo)
+    const consultaGastos = semestre
+      ? apiFetch(`/api/gastos-extra?semestre=${semestre}`).then((res) => (res.ok ? res.json() : null)).catch(() => null)
+      : Promise.resolve(null)
+    Promise.all([
+      apiFetch('/api/presupuesto').then((res) => (res.ok ? res.json() : null)).catch(() => null),
+      consultaGastos,
+    ]).then(([presupuesto, gastos]) => {
+      if (!vigente) return
+      const seleccionadas = planGuardado.materias_seleccionadas
+        ? Object.entries(planGuardado.materias_seleccionadas).filter(([, estado]) => estado?.seleccionada).map(([nombre]) => nombre)
+        : [...new Set((planGuardado.bloques ?? []).filter((bloque) => bloque.tipo === 'clase').map((bloque) => bloque.nombre))]
+      const creditosPorMateria = new Map(Object.entries(planGuardado.creditos_materias ?? {}).map(([nombre, creditos]) => [nombre.trim(), Number(creditos) || 0]))
+      const creditos = seleccionadas.reduce((total, nombre) => total + (creditosPorMateria.get(nombre.trim()) ?? 0), 0)
+      const config = crearConfigCosto({ valorCredito: planGuardado.valor_credito, beca: presupuesto?.beca, gastosExtra: gastos?.total ?? 0 })
+      const costo = config && creditos > 0 ? calcularCostoSeleccion(creditos, config).costoFinal : null
+      setPagoMensual(costo === null ? null : costo / config.meses)
+    }).finally(() => vigente && setCargandoPago(false))
+    return () => { vigente = false }
+  }, [emailUsuario, planGuardado])
   const horarios = useMemo(() => (
     planGuardado
       ? planGuardado.bloques.filter((bloque) => bloque.tipo === 'clase')
@@ -445,6 +484,13 @@ function WeeklyPlanner({ emailUsuario, onIr }) {
           </div>
         </div>
         <p className="cal-pista">Tocá un espacio libre para agregar un evento, o un bloque para ver el detalle.</p>
+      <section className="cal-pago-mensual" aria-live="polite" aria-label="Pago mensual estimado">
+        <div>
+          <span>Pago mensual estimado</span>
+          <p>Materias del semestre, beca y gastos extra prorrateados en 6 meses.</p>
+        </div>
+        <strong>{cargandoPago ? 'Calculando...' : pagoMensual === null ? 'Guarda de nuevo tu semestre para calcular' : formatearMonto(pagoMensual)}</strong>
+      </section>
       </div>
     </main>
   )

@@ -508,6 +508,10 @@
   grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr);
   align-items: center;
   gap: clamp(24px, 5vw, 64px);
+  padding: clamp(24px, 4vw, 40px);
+  border: 1px solid var(--borde);
+  border-radius: 20px;
+  background: #fff;
 }
 
 .pe-vacio-sello {
