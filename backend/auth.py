@@ -17,7 +17,7 @@ def _clave_secreta():
     clave = os.environ.get("SECRET_KEY")
     if clave:
         return clave
-    base = leer_secret("DB_PASSWORD_FILE").encode("utf-8")
+    base = (os.environ.get("DATABASE_URL") or os.environ.get("POSTGRES_URL") or leer_secret("DB_PASSWORD_FILE")).encode("utf-8")
     return hmac.new(base, b"kairo-token-sesion", hashlib.sha256).hexdigest()
 
 
