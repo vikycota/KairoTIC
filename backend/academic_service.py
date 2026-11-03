@@ -30,7 +30,9 @@ def obtener_estado_academico(cur, email, carrera):
 
     cur.execute(
         """
-        SELECT m.Nombre, m.Materia_Previa_Nombre
+        SELECT m.Nombre,
+               ARRAY(SELECT p.Previa_Nombre FROM Previas p
+                     WHERE p.Materias_Nombre = m.Nombre ORDER BY p.Previa_Nombre)
         FROM Tiene t
         JOIN Materias m ON m.Nombre = t.Materias_Nombre
         WHERE t.Carreras_Nombre = %s
@@ -41,15 +43,16 @@ def obtener_estado_academico(cur, email, carrera):
 
     habilitadas = []
     bloqueadas = []
-    for nombre, previa in cur.fetchall():
+    for nombre, previas in cur.fetchall():
         if nombre in aprobadas:
             continue
-        if not previa or previa in aprobadas:
+        faltan = [p for p in previas if p not in aprobadas]
+        if not faltan:
             habilitadas.append(nombre)
         else:
             bloqueadas.append({
                 "nombre": nombre,
-                "motivo": f"Requiere {previa}",
+                "motivo": "Requiere " + ", ".join(faltan),
             })
 
     return {
