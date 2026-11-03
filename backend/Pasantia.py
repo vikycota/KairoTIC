@@ -1,10 +1,10 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, g, request, jsonify
 from psycopg2 import errors
 import traceback
+from auth import requiere_login
 from conexion import obtener_conexion
 from validaciones import (
     ValidationError,
-    validar_email,
     validar_no_vacio,
     validar_longitud,
     detectar_intento_sql_injection,
@@ -14,13 +14,14 @@ pasantia_bp = Blueprint("pasantia", __name__)
 
 
 @pasantia_bp.route("/pasantia", methods=["POST"])
+@requiere_login
 def agregar_pasantia():
     data = request.get_json(silent=True)
     if not data:
         return jsonify({"error": "Body inválido o faltante."}), 400
 
     try:
-        email = validar_email(data.get("email"))
+        email = g.email  # la pasantía siempre es de quien tiene la sesión iniciada
 
         empresa = validar_no_vacio(data.get("empresa"), "empresa")
         empresa = validar_longitud(empresa, "empresa", minimo=2, maximo=150)
@@ -77,12 +78,10 @@ def agregar_pasantia():
             conn.close()
 
 
-@pasantia_bp.route("/persona/<string:email>/pasantias", methods=["GET"])
-def listar_pasantias(email):
-    try:
-        email = validar_email(email)
-    except ValidationError as e:
-        return jsonify({"error": e.message}), 400
+@pasantia_bp.route("/pasantias", methods=["GET"])
+@requiere_login
+def listar_pasantias():
+    email = g.email
 
     conn = None
     try:

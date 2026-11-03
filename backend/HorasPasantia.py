@@ -1,10 +1,11 @@
 from datetime import date
 
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, g, request, jsonify
 from psycopg2 import errors
 
+from auth import requiere_login
 from conexion import obtener_conexion
-from validaciones import ValidationError, validar_email
+from validaciones import ValidationError
 
 horas_pasantia_bp = Blueprint("horas_pasantia", __name__)
 
@@ -55,6 +56,7 @@ def _calcular_horas(fecha_inicio, fecha_fin, horas_por_semana):
 
 
 @horas_pasantia_bp.route("/pasantia/<int:pasantia_id>/horas", methods=["POST"])
+@requiere_login
 def cargar_horas(pasantia_id):
     data = request.get_json(silent=True)
     if not data:
@@ -77,7 +79,7 @@ def cargar_horas(pasantia_id):
         cur = conn.cursor()
 
         # Confirmamos que la pasantía exista antes de cargarle horas.
-        cur.execute("SELECT Email, Fecha_Inicio, Fecha_Fin FROM Pasantias WHERE Id = %s", (pasantia_id,))
+        cur.execute("SELECT Email, Fecha_Inicio, Fecha_Fin FROM Pasantias WHERE Id = %s AND Email = %s", (pasantia_id, g.email))
         fila = cur.fetchone()
         if not fila:
             cur.close()
@@ -165,6 +167,7 @@ def _obtener_progreso(cur, email):
 
 
 @horas_pasantia_bp.route("/pasantia/<int:pasantia_id>/horas-extra", methods=["POST"])
+@requiere_login
 def agregar_horas_extra(pasantia_id):
     """Suma horas a mano a una pasantía. Body: {"horas": 8, "descripcion"?: "..."}"""
     data = request.get_json(silent=True)
@@ -188,7 +191,7 @@ def agregar_horas_extra(pasantia_id):
         _asegurar_columna_objetivo(conn)
         cur = conn.cursor()
 
-        cur.execute("SELECT Email FROM Pasantias WHERE Id = %s", (pasantia_id,))
+        cur.execute("SELECT Email FROM Pasantias WHERE Id = %s AND Email = %s", (pasantia_id, g.email))
         fila = cur.fetchone()
         if not fila:
             cur.close()
@@ -215,15 +218,16 @@ def agregar_horas_extra(pasantia_id):
             conn.close()
 
 
-@horas_pasantia_bp.route("/persona/<string:email>/horas-objetivo-pasantia", methods=["PUT"])
-def definir_horas_objetivo(email):
+@horas_pasantia_bp.route("/horas-objetivo-pasantia", methods=["PUT"])
+@requiere_login
+def definir_horas_objetivo():
     """Define cuántas horas de pasantía tiene que juntar la persona. Body: {"horas_objetivo": 200}"""
     data = request.get_json(silent=True)
     if not data:
         return jsonify({"error": "Body inválido o faltante."}), 400
 
+    email = g.email
     try:
-        email = validar_email(email)
         objetivo = data.get("horas_objetivo")
         if isinstance(objetivo, bool) or not isinstance(objetivo, int) or not (1 <= objetivo <= HORAS_MAXIMAS_OBJETIVO):
             raise ValidationError(f"Las horas objetivo deben ser un número entero entre 1 y {HORAS_MAXIMAS_OBJETIVO}.")
@@ -258,12 +262,10 @@ def definir_horas_objetivo(email):
             conn.close()
 
 
-@horas_pasantia_bp.route("/persona/<string:email>/progreso-pasantia", methods=["GET"])
-def progreso_pasantia(email):
-    try:
-        email = validar_email(email)
-    except ValidationError as e:
-        return jsonify({"error": e.message}), 400
+@horas_pasantia_bp.route("/progreso-pasantia", methods=["GET"])
+@requiere_login
+def progreso_pasantia():
+    email = g.email
 
     conn = None
     try:
