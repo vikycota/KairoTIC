@@ -197,8 +197,13 @@ function ImportarPlanModal({ abierto, archivoInicial = null, onCerrar, onImporta
         <div className="importar-cuerpo">
           <p className="importar-ayuda">
             Subí tu plan en <strong>PDF</strong>, <strong>.csv</strong>, <strong>.xlsx</strong> o <strong>.json</strong>.
-            Con CSV, XLSX o JSON, cada fila es una materia: semestre, materia, créditos, categoría y previas
-            (varias previas se separan con “;”). Guardar reemplaza el plan anterior de esa carrera.
+            Con CSV, XLSX o JSON, cada fila es una materia. Semestre, materia y créditos son obligatorios;
+            categoría y previas son opcionales. La plantilla CSV usa punto y coma como separador; si cargás
+            varias previas separadas por punto y coma, encerrá esa celda entre comillas.
+            Guardar reemplaza el plan anterior de esa carrera.
+          </p>
+          <p className="importar-plantillas">
+            <a href="/api/plan/plantilla.csv">Descargar plantilla CSV vacía</a> para completarla con tus materias.
           </p>
           <div className="importar-campos">
             <label
