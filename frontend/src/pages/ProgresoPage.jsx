@@ -198,7 +198,7 @@ function ProgresoPage({ onIr }) {
         setAviso(
           json.aprobada
             ? `¡${materiaSel} aprobada con ${json.nota}! Se acreditaron sus créditos.`
-            : `Examen guardado: ${json.nota} no alcanza para aprobar (hace falta más de ${notaAprobacion}).`
+            : `Examen guardado: ${json.nota} no alcanza para aprobar (hace falta al menos ${notaAprobacion}).`
         )
         setNota(null)
         cargarCarrera(carrera)
@@ -242,7 +242,7 @@ function ProgresoPage({ onIr }) {
         <span className="pg-blob pg-blob--2" aria-hidden="true" />
         <span className="pg-etiqueta">Mi progreso</span>
         <h1>{carrera || 'Tu avance en la carrera'}</h1>
-        <p>Cada carrera lleva su propio avance. Una materia acredita sus créditos cuando la aprobás con más de {notaAprobacion}.</p>
+        <p>Cada carrera lleva su propio avance. Una materia acredita sus créditos cuando la aprobás con {notaAprobacion} o más.</p>
       </header>
 
       <div className="pg-contenido">
@@ -352,7 +352,7 @@ function ProgresoPage({ onIr }) {
                           <button
                             type="button"
                             key={n}
-                            className={`pg-nota ${nota === n ? 'pg-nota--activa' : ''} ${n > notaAprobacion ? 'pg-nota--pasa' : ''}`}
+                            className={`pg-nota ${nota === n ? 'pg-nota--activa' : ''} ${n >= notaAprobacion ? 'pg-nota--pasa' : ''}`}
                             aria-pressed={nota === n}
                             onClick={() => setNota(n)}
                           >
@@ -360,7 +360,7 @@ function ProgresoPage({ onIr }) {
                           </button>
                         ))}
                       </div>
-                      <p className="pg-pista">Se aprueba con una nota mayor a {notaAprobacion}. Podés cargar todos tus intentos.</p>
+                      <p className="pg-pista">Se aprueba con una nota de {notaAprobacion} o más. Hay que tener aprobadas las previas para rendir. Podés cargar todos tus intentos.</p>
                     </fieldset>
                     <label className="pg-fecha">
                       <span>Fecha del examen</span>
