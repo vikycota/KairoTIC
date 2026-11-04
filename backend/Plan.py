@@ -773,6 +773,9 @@ def importar():
             if error:
                 return error
 
+            if resultado is None:
+                return jsonify({"error": "No se pudo validar el plan recibido."}), 500
+
             if not resultado["valido"]:
 
                 return jsonify({
@@ -1026,6 +1029,64 @@ def listar_carreras():
 # ============================================================
 # LEER PLAN
 # ============================================================
+
+@plan_bp.route(
+    "/plan",
+    methods=["DELETE"]
+)
+@requiere_login
+def eliminar_plan():
+    carrera = (request.args.get("carrera") or "").strip()
+    if not carrera:
+        return jsonify({"error": "Falta el parámetro 'carrera'."}), 400
+
+    conn = None
+    try:
+        conn = obtener_conexion()
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT 1
+                FROM Pertenecen_A
+                WHERE Email = %s AND Carreras_Nombre = %s
+                """,
+                (g.email, carrera),
+            )
+            if not cur.fetchone():
+                return jsonify({"error": "La carrera no existe para esta persona."}), 404
+
+            cur.execute(
+                """
+                SELECT COUNT(*)
+                FROM Pertenecen_A
+                WHERE Carreras_Nombre = %s AND Email <> %s
+                """,
+                (carrera, g.email),
+            )
+            fila_compartida = cur.fetchone()
+            carrera_compartida = bool(fila_compartida and fila_compartida[0] > 0)
+
+            if carrera_compartida:
+                cur.execute(
+                    """
+                    DELETE FROM Pertenecen_A
+                    WHERE Email = %s AND Carreras_Nombre = %s
+                    """,
+                    (g.email, carrera),
+                )
+            else:
+                cur.execute("DELETE FROM Carreras WHERE Nombre = %s", (carrera,))
+
+        conn.commit()
+        return jsonify({"message": "Plan eliminado correctamente."}), 200
+    except Exception as e:
+        if conn:
+            conn.rollback()
+        print(f"Error al eliminar plan: {e}")
+        return jsonify({"error": "Error interno del servidor."}), 500
+    finally:
+        if conn:
+            conn.close()
 
 @plan_bp.route(
     "/plan",

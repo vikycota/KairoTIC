@@ -407,6 +407,39 @@
   font-weight: 700;
 }
 
+.seleccion-automatica-pregunta {
+  display: grid;
+  gap: 10px;
+  margin-top: 10px;
+  padding: 12px;
+  border: 1px solid #d9d2f5;
+  border-radius: 10px;
+  background: #f8f5ff;
+  color: #392477;
+}
+
+.seleccion-automatica-pregunta p {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.seleccion-automatica-pregunta-acciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.seleccion-automatica-pregunta-acciones button {
+  padding: 7px 10px;
+  border: 1px solid #c9bced;
+  border-radius: 7px;
+  background: #fff;
+  color: #392477;
+  font: inherit;
+  cursor: pointer;
+}
+
 .planificacion-metricas {
   display: grid;
   gap: 3px;

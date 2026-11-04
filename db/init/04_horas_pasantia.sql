@@ -1,4 +1,4 @@
-CREATE TABLE Horas_Pasantia (
+CREATE TABLE IF NOT EXISTS Horas_Pasantia (
     Id              SERIAL          PRIMARY KEY,
     Pasantias_Id    INT             NOT NULL,
     Horas           NUMERIC(6,2)    NOT NULL,

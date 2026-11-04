@@ -123,7 +123,7 @@ function App() {
 
         {vista === 'planificar' && <PlanPage emailUsuario={usuario.email} onIr={setVista} />}
           
-        {vista === 'ajustes' && <ConfigPage tema={tema} degradado={degradado} onCambiarTema={setTema} onCambiarDegradado={setDegradado} />}
+        {vista === 'ajustes' && <ConfigPage usuario={usuario} tema={tema} degradado={degradado} onCambiarTema={setTema} onCambiarDegradado={setDegradado} />}
       </main>
 
     </div>

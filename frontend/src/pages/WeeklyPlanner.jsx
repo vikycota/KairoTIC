@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useContador } from '../useContador'
+import { apiFetch } from '../api'
+import { calcularCostoSeleccion, crearConfigCosto, etiquetaSemestre, formatearMonto } from './costosSemestre'
 import '../pagesCSS/Calendario.css'
+import '../pagesCSS/CalendarioPago.css'
 
 const DIAS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom']
 const DIAS_LARGOS = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo']
@@ -95,6 +98,11 @@ function leerStorage(clave) {
   }
 }
 
+function leerPlanGuardado(email) {
+  const guardado = leerStorage(`kairo-planificaciones:${email}`)
+  return guardado?.por_periodo?.[guardado?.activo] ?? null
+}
+
 function guardarStorage(clave, valor) {
   try {
     localStorage.setItem(clave, JSON.stringify(valor))
@@ -149,12 +157,64 @@ function WeeklyPlanner({ emailUsuario, onIr }) {
   const [panel, setPanel] = useState(null)       // { tipo: 'ver', evento } | { tipo: 'form', borrador }
   const [error, setError] = useState('')
   const [ahora, setAhora] = useState(() => new Date())
+  const [pagoMensual, setPagoMensual] = useState(null)
+  const [errorPago, setErrorPago] = useState('')
+  const [cargandoPago, setCargandoPago] = useState(false)
+  const [planSnapshot, setPlanSnapshot] = useState(() => ({
+    email: emailUsuario,
+    plan: leerPlanGuardado(emailUsuario),
+  }))
+  useEffect(() => {
+    const actualizarPlan = () => {
+      setPlanSnapshot({ email: emailUsuario, plan: leerPlanGuardado(emailUsuario) })
+    }
+    window.addEventListener('kairo-planificacion-actualizada', actualizarPlan)
+    return () => window.removeEventListener('kairo-planificacion-actualizada', actualizarPlan)
+  }, [emailUsuario])
 
   // El último plan guardado se muestra en el calendario; si no existe, se usan las cargas.
-  const planGuardado = useMemo(() => {
-    const guardado = leerStorage(`kairo-planificaciones:${emailUsuario}`)
-    return guardado?.por_periodo?.[guardado.activo] ?? null
-  }, [emailUsuario])
+  const planGuardado = planSnapshot.email === emailUsuario ? planSnapshot.plan : leerPlanGuardado(emailUsuario)
+  useEffect(() => {
+    if (!emailUsuario || !planGuardado) return undefined
+    let vigente = true
+    const semestre = etiquetaSemestre(planGuardado.anio_lectivo, planGuardado.semestre_lectivo)
+    Promise.resolve().then(async () => {
+      if (!vigente) return
+      setCargandoPago(true)
+      setErrorPago('')
+      try {
+        if (!semestre) throw new Error('El semestre guardado no es válido.')
+        const [resPresupuesto, resGastos] = await Promise.all([
+          apiFetch('/api/presupuesto'),
+          apiFetch(`/api/gastos-extra?semestre=${semestre}`),
+        ])
+        if (!resPresupuesto.ok || !resGastos.ok) throw new Error('No se pudieron cargar el presupuesto y los gastos.')
+        const [presupuesto, gastos] = await Promise.all([resPresupuesto.json(), resGastos.json()])
+        if (!vigente) return
+        const seleccionadas = planGuardado.materias_seleccionadas
+          ? Object.entries(planGuardado.materias_seleccionadas).filter(([, estado]) => estado?.seleccionada).map(([nombre]) => nombre)
+          : [...new Set((planGuardado.bloques ?? []).filter((bloque) => bloque.tipo === 'clase').map((bloque) => bloque.nombre))]
+        const creditosPorMateria = new Map(Object.entries(planGuardado.creditos_materias ?? {}).map(([nombre, creditos]) => [nombre.trim(), Number(creditos) || 0]))
+        const creditos = seleccionadas.reduce((total, nombre) => total + (creditosPorMateria.get(nombre.trim()) ?? 0), 0)
+        const config = crearConfigCosto({ valorCredito: planGuardado.valor_credito, beca: presupuesto?.beca, gastosExtra: gastos?.total })
+        const costo = config && creditos > 0 ? calcularCostoSeleccion(creditos, config).costoFinal : null
+        if (costo === null) {
+          setPagoMensual(null)
+          setErrorPago('Faltan datos del semestre o del costo por crédito. Guardá el semestre y revisá Configuración.')
+        } else {
+          setPagoMensual(costo / config.meses)
+        }
+      } catch (error) {
+        if (vigente) {
+          setPagoMensual(null)
+          setErrorPago(error.message || 'No se pudo calcular el pago mensual.')
+        }
+      } finally {
+        if (vigente) setCargandoPago(false)
+      }
+    })
+    return () => { vigente = false }
+  }, [emailUsuario, planGuardado])
   const horarios = useMemo(() => (
     planGuardado
       ? planGuardado.bloques.filter((bloque) => bloque.tipo === 'clase')
@@ -445,6 +505,13 @@ function WeeklyPlanner({ emailUsuario, onIr }) {
           </div>
         </div>
         <p className="cal-pista">Tocá un espacio libre para agregar un evento, o un bloque para ver el detalle.</p>
+      <section className="cal-pago-mensual" aria-live="polite" aria-label="Pago mensual estimado">
+        <div>
+          <span>Pago mensual estimado</span>
+          <p>Materias del semestre, beca y gastos extra prorrateados en 6 meses.</p>
+        </div>
+        <strong>{cargandoPago ? 'Calculando...' : !planGuardado ? 'Guardá un semestre para calcular' : pagoMensual === null ? (errorPago || 'No se pudo calcular el pago mensual') : formatearMonto(pagoMensual)}</strong>
+      </section>
       </div>
     </main>
   )

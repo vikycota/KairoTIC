@@ -1,7 +1,7 @@
-function AuthLayout() {
+export default function AuthLayout({ children }) {
   return (
     <div className="auth-layout">
-      <Outlet />
+      {children}
     </div>
   )
 }

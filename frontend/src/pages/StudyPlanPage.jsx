@@ -304,7 +304,7 @@ function StudyPlanPage() {
   return (
     <main className="pe-page">
       {/* ---------- Cabecera ---------- */}
-      <header className="pe-hero">
+      <header className={`pe-hero ${vacio ? 'pe-hero--vacio' : ''}`}>
         <span className="pe-blob pe-blob--1" aria-hidden="true" />
         <span className="pe-blob pe-blob--2" aria-hidden="true" />
 

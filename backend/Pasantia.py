@@ -1,8 +1,8 @@
 from flask import Blueprint, g, request, jsonify
 from psycopg2 import errors
 import traceback
-from auth import requiere_login
 from conexion import obtener_conexion
+from auth import requiere_login
 from validaciones import (
     ValidationError,
     validar_no_vacio,

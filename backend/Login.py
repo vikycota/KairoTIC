@@ -13,6 +13,8 @@ login_bp = Blueprint("login", __name__)
 def validar_password_login(password):
     if not isinstance(password, str) or password == "":
         raise ValidationError("El campo 'password' no puede estar vacío.")
+    if len(password) > 128:
+        raise ValidationError("La contraseña no puede superar los 128 caracteres.")
     return password
 
 
@@ -47,16 +49,14 @@ def login():
 
         if not fila:
             return jsonify({
-                "error": "No encontramos una cuenta con ese email.",
-                "campo": "email",
+                "error": "Email o contraseña incorrectos.",
             }), 401
 
         nombre, apellido, hashed_str = fila
 
         if not bcrypt.checkpw(password.encode("utf-8"), hashed_str.encode("utf-8")):
             return jsonify({
-                "error": "La contraseña es incorrecta.",
-                "campo": "password",
+                "error": "Email o contraseña incorrectos.",
             }), 401
 
         return jsonify({
