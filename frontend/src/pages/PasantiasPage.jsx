@@ -82,7 +82,7 @@ const FORM_PASANTIA_VACIO = { empresa: '', fecha_inicio: '', fecha_fin: '', cred
 const FORM_HORAS_VACIO = { pasantia_id: '', horas_por_semana: '20', descripcion: '' }
 const FORM_EXTRA_VACIO = { horas: '', descripcion: '' }
 
-function PasantiasPage({ emailUsuario }) {
+function PasantiasPage() {
   const [pasantias, setPasantias] = useState([])
   const [progreso, setProgreso] = useState(null)
   const [cargando, setCargando] = useState(true)
@@ -107,14 +107,12 @@ function PasantiasPage({ emailUsuario }) {
   const [guardandoExtra, setGuardandoExtra] = useState(false)
   const [mensajeExtra, setMensajeExtra] = useState(null)
 
-  const email = encodeURIComponent(emailUsuario ?? '')
-
   // Carga la lista y el progreso; se vuelve a ejecutar cuando cambia `revision` (después de guardar algo).
   useEffect(() => {
     let vigente = true
     Promise.all([
-      apiFetch(`/api/persona/${email}/pasantias`),
-      apiFetch(`/api/persona/${email}/progreso-pasantia`),
+      apiFetch('/api/pasantias'),
+      apiFetch('/api/progreso-pasantia'),
     ])
       .then(async ([resLista, resProgreso]) => {
         const [jsonLista, jsonProgreso] = await Promise.all([leerJson(resLista), leerJson(resProgreso)])
@@ -128,7 +126,7 @@ function PasantiasPage({ emailUsuario }) {
       .catch((error) => vigente && setErrorCarga(error.message || 'No se pudo conectar con el servidor.'))
       .finally(() => vigente && setCargando(false))
     return () => { vigente = false }
-  }, [email, revision])
+  }, [revision])
 
   // Pasantía elegida para cargar horas: si la guardada ya no existe (o todavía no hay), se usa la primera.
   const pasantiaElegida = pasantias.some((p) => String(p.id) === formHoras.pasantia_id)
@@ -172,7 +170,6 @@ function PasantiasPage({ emailUsuario }) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          email: emailUsuario,
           empresa: formPasantia.empresa,
           fecha_inicio: formPasantia.fecha_inicio,
           fecha_fin: formPasantia.fecha_fin || null,
@@ -211,7 +208,7 @@ function PasantiasPage({ emailUsuario }) {
     }
     setGuardandoMeta(true)
     try {
-      const res = await apiFetch(`/api/persona/${email}/horas-objetivo-pasantia`, {
+      const res = await apiFetch('/api/horas-objetivo-pasantia', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ horas_objetivo: valor }),
