@@ -645,6 +645,7 @@ function InicioPage({ nombreUsuario, emailUsuario, onIr }) {
     talleres: (v) => setListos((l) => (l.talleres === v ? l : { ...l, talleres: v })),
   }), [])
   const progreso = Object.values(listos).filter(Boolean).length
+  const planificarBloqueado = !listos.plan || !listos.horarios
 
   return (
     <div className="inicio-page">
@@ -663,6 +664,12 @@ function InicioPage({ nombreUsuario, emailUsuario, onIr }) {
           <div className="inicio-dato inicio-dato--barra" aria-label={`${progreso} de 3 pasos completados`}>
             <span>Avance</span>
             <div className="inicio-avance-barra"><span style={{ width: `${(progreso / 3) * 100}%` }} /></div>
+          </div>
+          <div className="inicio-planificar">
+            <button type="button" className="inicio-btn-planificar" disabled={planificarBloqueado} onClick={() => onIr?.('planificar')}>
+              Planificar semestre →
+            </button>
+            {planificarBloqueado && <span>Cargá al menos el plan y los horarios para continuar.</span>}
           </div>
         </div>
       </header>
@@ -688,12 +695,6 @@ function InicioPage({ nombreUsuario, emailUsuario, onIr }) {
           />
         </div>
 
-        <footer className="inicio-pie">
-          <button type="button" className="inicio-btn" disabled={!listos.plan || !listos.horarios} onClick={() => onIr?.('planificar')}>
-            Planificar semestre →
-          </button>
-          {(!listos.plan || !listos.horarios) && <span>Cargá al menos el plan y los horarios para continuar.</span>}
-        </footer>
       </div>
     </div>
   )
