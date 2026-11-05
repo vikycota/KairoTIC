@@ -1039,7 +1039,7 @@
   .plan-header { align-items: stretch; padding-top: 28px; }
   .planificar-buttons { justify-content: flex-start; }
   .planificar-buttons button { flex: 1 1 auto; }
-  .plan-periodo-selector { width: calc(100% - 32px); padding: 14px; }
+  .plan-periodo-selector { width: calc(100% - 32px); padding: 14px; grid-template-columns: 1fr; }
   .materias-resumen,
   .planificacion-alternativas,
   .planificacion-feedback,
@@ -1054,6 +1054,7 @@
 }
 
 @media (max-width: 480px) {
+  .materia-grupo { grid-template-columns: 1fr; gap: 4px; }
   .bloque-manual-horas { grid-template-columns: 1fr; }
   .bloque-manual-modal { max-height: calc(100vh - 32px); }
   .seleccion-automatica-encabezado { flex-direction: column; }

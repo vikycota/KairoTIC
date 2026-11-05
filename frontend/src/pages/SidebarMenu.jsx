@@ -39,7 +39,22 @@ function iniciales(usuario) {
   return letras.join('') || '?'
 }
 
+const CONSULTA_MOVIL = '(max-width: 720px)'
+
+function useEsMovil() {
+  const [esMovil, setEsMovil] = useState(() => typeof window !== 'undefined' && window.matchMedia(CONSULTA_MOVIL).matches)
+  useEffect(() => {
+    const consulta = window.matchMedia(CONSULTA_MOVIL)
+    const alCambiar = (evento) => setEsMovil(evento.matches)
+    consulta.addEventListener('change', alCambiar)
+    return () => consulta.removeEventListener('change', alCambiar)
+  }, [])
+  return esMovil
+}
+
 function SidebarMenu({ itemActivo = 'inicio', usuario, onSeleccionar, onCerrarSesion }) {
+  const esMovil = useEsMovil()
+  const [menuAbierto, setMenuAbierto] = useState(false)
   const [colapsado, setColapsado] = useState(() => {
     try {
       return localStorage.getItem('kairo-sidebar-colapsado') === 'true'
@@ -54,25 +69,44 @@ function SidebarMenu({ itemActivo = 'inicio', usuario, onSeleccionar, onCerrarSe
     } catch { /* sin almacenamiento: se recuerda solo en esta sesión */ }
   }, [colapsado])
 
+  // En celular el menú es un panel lateral que se abre con el botón de la barra superior: siempre muestra los textos.
+  const compacto = colapsado && !esMovil
+  const cerrarMenu = () => setMenuAbierto(false)
+
+  useEffect(() => {
+    if (!esMovil || !menuAbierto) return undefined
+    const alTeclear = (evento) => { if (evento.key === 'Escape') setMenuAbierto(false) }
+    window.addEventListener('keydown', alTeclear)
+    return () => window.removeEventListener('keydown', alTeclear)
+  }, [esMovil, menuAbierto])
+
   const nombreCompleto = [usuario?.nombre, usuario?.apellido].filter(Boolean).join(' ')
 
   return (
-    <aside className={`sidebar ${colapsado ? 'sidebar--colapsado' : ''}`}>
+    <>
+      <header className="sidebar-topbar">
+        <button type="button" className="sidebar-hamburguesa" onClick={() => setMenuAbierto(true)} aria-label="Abrir menú" aria-expanded={menuAbierto}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16" /></svg>
+        </button>
+        <span className="sidebar-marca">KAIRO</span>
+      </header>
+      {menuAbierto && <div className="sidebar-fondo" onClick={cerrarMenu} aria-hidden="true" />}
+    <aside className={`sidebar ${compacto ? 'sidebar--colapsado' : ''} ${menuAbierto ? 'sidebar--abierto' : ''}`}>
       <div className="sidebar-header">
         <span className="sidebar-logo-marco">
           <img className="sidebar-logo" src={logoKairo} alt="Logo Kairo" />
         </span>
-        {!colapsado && <span className="sidebar-marca">KAIRO</span>}
+        {!compacto && <span className="sidebar-marca">KAIRO</span>}
 
         <button
           className="sidebar-toggle"
           type="button"
-          onClick={() => setColapsado((valor) => !valor)}
-          aria-label={colapsado ? 'Expandir menú' : 'Colapsar menú'}
-          aria-expanded={!colapsado}
+          onClick={() => (esMovil ? cerrarMenu() : setColapsado((valor) => !valor))}
+          aria-label={esMovil ? 'Cerrar menú' : compacto ? 'Expandir menú' : 'Colapsar menú'}
+          aria-expanded={!compacto}
         >
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-            <path d={colapsado ? 'M9 6l6 6-6 6' : 'M15 6l-6 6 6 6'} />
+            <path d={compacto ? 'M9 6l6 6-6 6' : 'M15 6l-6 6 6 6'} />
           </svg>
         </button>
       </div>
@@ -80,7 +114,7 @@ function SidebarMenu({ itemActivo = 'inicio', usuario, onSeleccionar, onCerrarSe
       <nav className="sidebar-nav" aria-label="Secciones">
         {GRUPOS.map((grupo) => (
           <div className="sidebar-grupo" key={grupo.titulo}>
-            {colapsado ? <hr className="sidebar-separador" /> : <span className="sidebar-grupo-titulo">{grupo.titulo}</span>}
+            {compacto ? <hr className="sidebar-separador" /> : <span className="sidebar-grupo-titulo">{grupo.titulo}</span>}
             {grupo.items.map((item) => {
               const activo = itemActivo === item.id
               return (
@@ -88,13 +122,13 @@ function SidebarMenu({ itemActivo = 'inicio', usuario, onSeleccionar, onCerrarSe
                   key={item.id}
                   type="button"
                   className={`sidebar-item ${activo ? 'sidebar-item--activo' : ''}`}
-                  onClick={() => onSeleccionar?.(item.id)}
+                  onClick={() => { onSeleccionar?.(item.id); cerrarMenu() }}
                   aria-current={activo ? 'page' : undefined}
-                  aria-label={colapsado ? item.etiqueta : undefined}
-                  title={colapsado ? item.etiqueta : undefined}
+                  aria-label={compacto ? item.etiqueta : undefined}
+                  title={compacto ? item.etiqueta : undefined}
                 >
                   <Icono ruta={item.icono} />
-                  {!colapsado && (
+                  {!compacto && (
                     <span className="sidebar-item-texto">{item.etiqueta}</span>
                   )}
                 </button>
@@ -106,9 +140,9 @@ function SidebarMenu({ itemActivo = 'inicio', usuario, onSeleccionar, onCerrarSe
 
       <div className="sidebar-footer">
         {usuario && (
-          <div className="sidebar-usuario" title={colapsado ? `${nombreCompleto} · ${usuario.email}` : undefined}>
+          <div className="sidebar-usuario" title={compacto ? `${nombreCompleto} · ${usuario.email}` : undefined}>
             <span className="sidebar-avatar" aria-hidden="true">{iniciales(usuario)}</span>
-            {!colapsado && (
+            {!compacto && (
               <span className="sidebar-usuario-datos">
                 <strong>{nombreCompleto}</strong>
                 <span>{usuario.email}</span>
@@ -119,15 +153,16 @@ function SidebarMenu({ itemActivo = 'inicio', usuario, onSeleccionar, onCerrarSe
         <button
           type="button"
           className="sidebar-item sidebar-item--salir"
-          onClick={onCerrarSesion}
-          aria-label={colapsado ? 'Cerrar sesión' : undefined}
-          title={colapsado ? 'Cerrar sesión' : undefined}
+          onClick={() => { cerrarMenu(); onCerrarSesion?.() }}
+          aria-label={compacto ? 'Cerrar sesión' : undefined}
+          title={compacto ? 'Cerrar sesión' : undefined}
         >
           <Icono ruta="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9" />
-          {!colapsado && <span className="sidebar-item-texto">Cerrar sesión</span>}
+          {!compacto && <span className="sidebar-item-texto">Cerrar sesión</span>}
         </button>
       </div>
     </aside>
+    </>
   )
 }
 
