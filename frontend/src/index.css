@@ -1,1 +1,11 @@
 
+
+/* Base para celular */
+html { -webkit-text-size-adjust: 100%; }
+img, svg, video { max-width: 100%; }
+
+@media (max-width: 720px) {
+  body { overflow-x: hidden; }
+  /* 16px evita que iOS haga zoom al enfocar un campo */
+  input, select, textarea { font-size: 16px !important; }
+}

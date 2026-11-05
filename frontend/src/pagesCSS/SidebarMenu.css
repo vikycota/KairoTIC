@@ -179,7 +179,7 @@
   font-weight: 600;
 }
 
-.sidebar-item:hover /* --- Footer: usuario y salida --- */
+/* --- Footer: usuario y salida --- */
 .sidebar-footer {
   display: flex;
   flex-direction: column;
@@ -224,17 +224,76 @@
   .sidebar, .sidebar-item, .sidebar-icon, .sidebar-logo-marco { transition: none; }
 }
 
-/* En pantallas angostas el menú queda como una barra fija y, al expandirse, se superpone al contenido */
+/* Barra superior y fondo: solo existen en celular */
+.sidebar-topbar,
+.sidebar-fondo { display: none; }
+
+/* En celular el menú es un panel lateral que se abre desde la barra superior */
 @media (max-width: 720px) {
-  .sidebar {
+  .sidebar-topbar {
     position: fixed;
-    left: 0;
     top: 0;
+    left: 0;
+    right: 0;
+    z-index: 30;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    height: 56px;
+    padding: 0 16px;
+    box-sizing: border-box;
+    background: #ffffff;
+    border-bottom: 1px solid #ece8fb;
+    box-shadow: 0 2px 14px rgba(32, 0, 100, 0.08);
   }
 
-  .sidebar:not(.sidebar--colapsado) {
-    box-shadow: 0 0 0 100vmax rgba(18, 0, 58, 0.35), 4px 0 24px rgba(32, 0, 100, 0.2);
+  .sidebar-topbar .sidebar-marca { flex: none; font-size: 18px; }
+
+  .sidebar-hamburguesa {
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    margin-left: -8px;
+    border: 0;
+    border-radius: 12px;
+    background: transparent;
+    color: #200064;
+    cursor: pointer;
   }
 
-  .app-content { margin-left: 76px; }
+  .sidebar-hamburguesa svg { width: 24px; height: 24px; }
+  .sidebar-hamburguesa:hover { background: #f4f0ff; }
+  .sidebar-hamburguesa:focus-visible { outline: 3px solid #c46bef; outline-offset: 2px; }
+
+  .sidebar {
+    --sidebar-ancho: min(300px, 86vw);
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 50;
+    transform: translateX(-105%);
+    visibility: hidden;
+    transition: transform 0.25s ease, visibility 0s linear 0.25s;
+  }
+
+  .sidebar--abierto {
+    transform: none;
+    visibility: visible;
+    transition: transform 0.25s ease;
+  }
+
+  .sidebar-fondo {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 40;
+    background: rgba(18, 0, 58, 0.45);
+  }
+
+  .sidebar-toggle { width: 40px; height: 40px; }
+  .sidebar-item { min-height: 44px; }
+
+  .app-layout { display: block; }
+  .app-content { margin-left: 0; padding-top: 56px; }
 }
