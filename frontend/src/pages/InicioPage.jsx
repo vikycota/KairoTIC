@@ -552,9 +552,10 @@ function CargadorHorarios({ clave, titulo, descripcion, numero, onListo }) {
           onSchedulesLoaded={sincronizarCalendario}
           permitirEliminar
           onSchedulesDeleted={quitarDelCalendario}
-        />
+        >
+          {listo && <VistaSemana bloques={bloques} tipo="horarios" />}
+        </ScheduleImportPanel>
       </div>
-      {listo && <VistaSemana bloques={bloques} tipo="horarios" />}
     </Tarjeta>
   )
 }

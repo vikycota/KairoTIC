@@ -45,9 +45,3 @@
 .schedule-danger:disabled { opacity: .55; cursor: not-allowed; }
 @media (max-width: 900px) { .schedule-import-form { grid-template-columns: repeat(2, minmax(0, 1fr)); } .schedule-import-form .schedule-primary { grid-column: 1 / -1; } }
 @media (max-width: 560px) { .schedule-import-card { padding: 17px; } .schedule-import-form { grid-template-columns: 1fr; } .schedule-import-form .schedule-primary { grid-column: auto; } .schedule-preview-summary { flex-direction: column; } .schedule-table { min-width: 730px; } }
-
-.schedule-saved-details > summary {
-  cursor: pointer;
-  font-weight: 600;
-  margin-bottom: 0.75rem;
-}

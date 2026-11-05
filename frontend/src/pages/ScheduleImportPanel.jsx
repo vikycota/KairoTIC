@@ -17,6 +17,7 @@ function ScheduleImportPanel({
   onSchedulesLoaded,
   permitirEliminar = false,
   onSchedulesDeleted,
+  children,
 }) {
   const [carrerasRemotas, setCarrerasRemotas] = useState([])
   const carreras = carrerasDisponibles ?? carrerasRemotas
@@ -230,14 +231,8 @@ function ScheduleImportPanel({
       {consultarHorariosExistentes && !preview && <div className="schedule-current">
         <h3>Horarios guardados · {carreraActiva || 'Seleccioná una carrera'} · {anio} · Semestre {semestre}</h3>
         {errorCarga && <p className="schedule-message schedule-error" role="alert">{errorCarga}</p>}
-        {cargando ? <p>Cargando horarios…</p> : bloques.length === 0 ? <p>No hay horarios guardados para este período.</p> : (
-          <details className="schedule-saved-details">
-          <summary>Ver tabla de {bloques.length} bloques guardados</summary>
-          <div className="schedule-table-wrap"><table className="schedule-table"><thead><tr><th>Materia</th><th>Grupo</th><th>Día</th><th>Horario</th><th>Tipo</th><th>Docente</th><th>Opcional</th></tr></thead><tbody>
-          {bloques.map((b, i) => <tr key={`${b.materia}-${b.dia}-${b.hora_inicio}-${i}`}><td>{b.materia}</td><td>{b.grupo}</td><td>{b.dia}</td><td>{b.hora_inicio}–{b.hora_fin}</td><td>{b.tipo}</td><td>{b.docente || '—'}</td><td>{b.opcional ? 'Sí' : 'No'}</td></tr>)}
-          </tbody></table></div>
-          </details>
-        )}
+        {cargando ? <p>Cargando horarios…</p> : bloques.length === 0 && <p>No hay horarios guardados para este período.</p>}
+        {children}
         {permitirEliminar && bloques.length > 0 && <div className="schedule-current-actions">
           <button type="button" className="schedule-danger" onClick={eliminarHorarios} disabled={eliminando || cargando}>
             {eliminando ? 'Eliminando…' : `Eliminar horarios de este semestre (${semestre})`}
