@@ -44,14 +44,43 @@ services:
       DB_PASSWORD_FILE: /run/secrets/db_password
       DB_NAME_FILE: /run/secrets/db_name
 
-      OLLAMA_URL: http://host.docker.internal:11434
-      OLLAMA_MODEL: llama3.2:3b
+      OLLAMA_URL: http://ollama:11434
+      OLLAMA_MODEL: llama3.2:1b
     networks:
       - backend_net
       - frontend_net
 
     ports:
       - "3000:3000"
+
+  ollama:
+    image: ollama/ollama:latest
+    container_name: kairo_ollama
+    restart: unless-stopped
+    volumes:
+      - ollama_data:/root/.ollama
+    networks:
+      - frontend_net
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+
+  ollama-model:
+    image: ollama/ollama:latest
+    depends_on:
+      ollama:
+        condition: service_healthy
+    environment:
+      OLLAMA_HOST: http://ollama:11434
+      OLLAMA_MODEL: llama3.2:1b
+    entrypoint: ["/bin/sh", "-c"]
+    command: ["ollama pull llama3.2:1b"]
+    networks:
+      - frontend_net
+    restart: on-failure
 
   frontend:
     build: ./frontend
@@ -91,6 +120,7 @@ secrets:
 
 volumes:
   pgdata:
+  ollama_data:
   caddy_data:
   caddy_config:
 

@@ -10,7 +10,7 @@ OLLAMA_URL = os.environ.get(
 
 OLLAMA_MODEL = os.environ.get(
     "OLLAMA_MODEL",
-    "llama3.2:3b"
+    "llama3.2:1b"
 )
 
 
@@ -70,7 +70,12 @@ DOCUMENTO:
                     "role": "user",
                     "content": prompt
                 }
-            ]
+            ],
+            "options": {
+                "num_ctx": 8192,
+                "num_predict": 3072,
+                "temperature": 0
+            }
         },
         timeout=600
     )

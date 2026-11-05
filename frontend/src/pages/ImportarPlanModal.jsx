@@ -120,7 +120,9 @@ function ImportarPlanModal({ abierto, archivoInicial = null, onCerrar, onImporta
   useEffect(() => {
     if (!abierto || !esArchivoPdf(archivo)) return
     let vigente = true
-    ;(async () => {
+    // El pequeño retraso permite que StrictMode cancele su primer montaje de desarrollo
+    // antes de enviar la petición costosa al modelo.
+    const espera = setTimeout(async () => {
       const datos = new FormData()
       datos.append('pdf', archivo)
       try {
@@ -128,7 +130,7 @@ function ImportarPlanModal({ abierto, archivoInicial = null, onCerrar, onImporta
         const json = await leerJson(res)
         if (!vigente) return
         if (!res.ok) {
-          setError(res.status >= 502 ? 'El servidor no responde. Verificá que el backend esté encendido.' : json.error || 'No se pudo leer el PDF.')
+          setError(json.error || (res.status >= 502 ? 'El servidor no responde. Verificá que el backend esté encendido.' : 'No se pudo leer el PDF.'))
         } else {
           setPlanPdf(json)
         }
@@ -137,8 +139,11 @@ function ImportarPlanModal({ abierto, archivoInicial = null, onCerrar, onImporta
       } finally {
         if (vigente) setRevisando(false)
       }
-    })()
-    return () => { vigente = false }
+    }, 250)
+    return () => {
+      vigente = false
+      clearTimeout(espera)
+    }
   }, [abierto, archivo])
 
   // Escape cierra el modal
@@ -239,7 +244,7 @@ function ImportarPlanModal({ abierto, archivoInicial = null, onCerrar, onImporta
             </label>
           </div>
 
-          {revisando && <p className="importar-estado">{esPdf ? 'Analizando PDF… puede tardar unos segundos.' : 'Revisando archivo…'}</p>}
+          {revisando && <p className="importar-estado">{esPdf ? 'Analizando PDF con el modelo local… puede tardar varios minutos.' : 'Revisando archivo…'}</p>}
           {error && <p className="importar-caja importar-caja-error" role="alert">{error}</p>}
 
           {revision && !revisando && (
