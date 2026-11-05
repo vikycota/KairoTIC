@@ -449,6 +449,7 @@ function CargadorBloques({ tipo, clave, titulo, descripcion, numero, etiqueta, o
           </form>
           {archivoSeleccionado && <p className="schedule-help">Archivo seleccionado: {archivoSeleccionado.name}</p>}
           <p className="schedule-help">Subí un archivo .csv con una fila por bloque: taller, día, inicio, fin, salón y cupos.</p>
+          <p className="schedule-templates">Plantilla: <a href="#plantilla-talleres" onClick={(event) => { event.preventDefault(); descargar(PLANTILLAS[tipo]) }}>CSV para Excel</a></p>
           <Mensajes errores={errores} aviso={errores.length && listo ? 'Se mantuvieron los talleres guardados anteriormente.' : ''} />
           {vistaPrevia && <section className="schedule-preview" aria-label="Vista previa de talleres">
             <div className="schedule-preview-summary">
@@ -468,6 +469,9 @@ function CargadorBloques({ tipo, clave, titulo, descripcion, numero, etiqueta, o
             <div className="schedule-table-wrap"><table className="schedule-table"><thead><tr><th>Taller</th><th>Día</th><th>Horario</th><th>Salón</th><th>Cupos</th></tr></thead><tbody>
               {bloques.map((bloque, indice) => <tr key={`${bloque.nombre}-${bloque.dia}-${bloque.inicio}-${indice}`}><td>{bloque.nombre}</td><td>{bloque.dia}</td><td>{bloque.inicio}–{bloque.fin}</td><td>{bloque.salon || '—'}</td><td>{bloque.extra || '—'}</td></tr>)}
             </tbody></table></div>
+            <div className="schedule-current-actions">
+              <button type="button" className="schedule-danger" onClick={quitar}>Eliminar talleres de este semestre ({semestre})</button>
+            </div>
           </div>}
         </>
       )}
@@ -480,12 +484,12 @@ function CargadorBloques({ tipo, clave, titulo, descripcion, numero, etiqueta, o
       />}
       {tipo !== 'talleres' && <Mensajes errores={errores} aviso={errores.length && listo ? 'Se mantuvo el archivo cargado anteriormente.' : ''} />}
       {tipo !== 'talleres' && listo && <VistaSemana bloques={bloques} tipo={tipo} />}
-      <footer className="inicio-acciones">
+      {tipo !== 'talleres' && <footer className="inicio-acciones">
         <button type="button" className="inicio-enlace" onClick={() => descargar(PLANTILLAS[tipo])}>
           Descargar plantilla
         </button>
-        {listo && <button type="button" className="inicio-enlace inicio-enlace--peligro" onClick={quitar}>{tipo === 'talleres' ? 'Quitar talleres de este semestre' : 'Quitar'}</button>}
-      </footer>
+        {listo && <button type="button" className="inicio-enlace inicio-enlace--peligro" onClick={quitar}>Quitar</button>}
+      </footer>}
     </Tarjeta>
   )
 }
