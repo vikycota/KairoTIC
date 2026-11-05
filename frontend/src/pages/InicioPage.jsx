@@ -667,7 +667,7 @@ function InicioPage({ nombreUsuario, emailUsuario, onIr }) {
           </div>
           <div className="inicio-planificar">
             <button type="button" className="inicio-btn-planificar" disabled={planificarBloqueado} onClick={() => onIr?.('planificar')}>
-              Planificar semestre →
+              Planificar semestre <span aria-hidden="true">→</span>
             </button>
             {planificarBloqueado && <span>Cargá al menos el plan y los horarios para continuar.</span>}
           </div>
