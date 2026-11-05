@@ -8,7 +8,7 @@ import unicodedata
 from openpyxl import load_workbook
 
 MAX_SEMESTRE = 10          # la base admite años 1-5 con 'Semestre 1' y 'Semestre 2'
-MAX_MATERIAS = 50
+MAX_MATERIAS = 90
 MAX_CREDITOS_MATERIA = 60
 MAX_NOMBRE = 100
 
