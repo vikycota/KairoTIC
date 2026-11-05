@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import '../pagesCSS/ScheduleImportPanel.css'
 import { apiFetch, EVENTO_CARRERAS_ACTUALIZADAS } from '../api'
+import { fechasSemestre } from './fechasSemestre'
 
 async function leerJson(res) {
   try { return await res.json() } catch { return {} }
@@ -23,6 +24,7 @@ function ScheduleImportPanel({
   const carreraActiva = carrera || carreras[0]?.nombre || ''
   const [anio, setAnio] = useState(String(anioInicial))
   const [semestre, setSemestre] = useState(String(semestreInicial))
+  const [fechas, setFechas] = useState(() => fechasSemestre(anioInicial, semestreInicial))
   const [archivo, setArchivo] = useState(null)
   const [preview, setPreview] = useState(null)
   const [error, setError] = useState('')
@@ -72,6 +74,9 @@ function ScheduleImportPanel({
       const json = await leerJson(res)
       if (!res.ok) throw new Error(json.error || 'No se pudieron cargar los horarios.')
       setBloques(json.bloques ?? [])
+      if (json.bloques?.[0]?.fecha_inicio && json.bloques?.[0]?.fecha_fin) {
+        setFechas({ fecha_inicio: json.bloques[0].fecha_inicio, fecha_fin: json.bloques[0].fecha_fin })
+      }
       onSchedulesLoaded?.(json)
       setErrorCarga('')
     } catch (err) {
@@ -94,6 +99,8 @@ function ScheduleImportPanel({
     data.append('carrera', carreraActiva)
     data.append('anio_lectivo', anio)
     data.append('semestre_lectivo', semestre)
+    data.append('fecha_inicio', fechas.fecha_inicio)
+    data.append('fecha_fin', fechas.fecha_fin)
     return data
   }
 
@@ -175,13 +182,21 @@ function ScheduleImportPanel({
         </label>
         <label>
           <span>Año lectivo</span>
-          <input type="number" min="1900" max="9999" value={anio} onChange={(e) => { setAnio(e.target.value); setPreview(null) }} />
+          <input type="number" min="1900" max="9999" value={anio} onChange={(e) => { setAnio(e.target.value); setFechas(fechasSemestre(e.target.value, semestre)); setPreview(null) }} />
         </label>
         <label>
           <span>Semestre</span>
-          <select value={semestre} onChange={(e) => { setSemestre(e.target.value); setPreview(null) }}>
+          <select value={semestre} onChange={(e) => { setSemestre(e.target.value); setFechas(fechasSemestre(anio, e.target.value)); setPreview(null) }}>
             <option value="1">1</option><option value="2">2</option>
           </select>
+        </label>
+        <label>
+          <span>Inicio de clases</span>
+          <input type="date" required value={fechas.fecha_inicio} onChange={(e) => { setFechas((actual) => ({ ...actual, fecha_inicio: e.target.value })); setPreview(null) }} />
+        </label>
+        <label>
+          <span>Fin de clases</span>
+          <input type="date" required min={fechas.fecha_inicio} value={fechas.fecha_fin} onChange={(e) => { setFechas((actual) => ({ ...actual, fecha_fin: e.target.value })); setPreview(null) }} />
         </label>
         <label className="schedule-file-field">
           <span>Archivo</span>
@@ -191,7 +206,7 @@ function ScheduleImportPanel({
           {analizando ? 'Analizando…' : 'Analizar horarios'}
         </button>
       </form>
-      <p className="schedule-help">Subí un archivo .csv, .xlsx o .json con una fila por bloque horario: materia, año de carrera, grupo, día, hora de inicio, hora de fin, docente, tipo y opcional. Guardar reemplaza los horarios anteriores de esa carrera y período.</p>
+      <p className="schedule-help">Subí un archivo .csv, .xlsx o .json con una fila por bloque horario: materia, año de carrera, grupo, día, hora de inicio, hora de fin, docente, tipo y opcional. Guardar reemplaza los horarios anteriores de esa carrera y período. Las clases se mostrarán solo entre las fechas indicadas.</p>
       <p className="schedule-templates">Plantillas: <a href="/api/horarios/plantilla.csv">CSV para Excel</a> · <a href="/api/horarios/plantilla.xlsx">XLSX</a> · <a href="/api/horarios/plantilla.json">JSON</a></p>
       {error && <p className="schedule-message schedule-error" role="alert">{error}</p>}
       {mensaje && <p className="schedule-message schedule-success" role="status">{mensaje}</p>}
@@ -199,7 +214,7 @@ function ScheduleImportPanel({
       {preview && <section className="schedule-preview" aria-label="Vista previa de horarios">
         <div className="schedule-preview-summary">
           <strong>{preview.carrera} · {preview.anio_lectivo} · Semestre {preview.semestre_lectivo}</strong>
-          <span>{preview.resumen?.materias ?? 0} materias · {preview.resumen?.bloques ?? 0} bloques · {preview.resumen?.grupos ?? 0} grupos</span>
+          <span>Del {preview.fecha_inicio} al {preview.fecha_fin} · {preview.resumen?.materias ?? 0} materias · {preview.resumen?.bloques ?? 0} bloques · {preview.resumen?.grupos ?? 0} grupos</span>
         </div>
         {preview.errores?.length > 0 && <div className="schedule-message schedule-error"><strong>Corregí estos problemas:</strong><ul>{preview.errores.map((item, i) => <li key={i}>{item}</li>)}</ul></div>}
         {preview.avisos?.length > 0 && <div className="schedule-message"><ul>{preview.avisos.map((item, i) => <li key={i}>{item}</li>)}</ul></div>}

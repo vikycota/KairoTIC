@@ -483,6 +483,7 @@ function PlanPage({ emailUsuario, onIr }) {
         grupo: bloque.grupo,
         repeticion: bloque.repeticion,
         fecha_inicio: bloque.fecha_inicio,
+        fecha_fin: bloque.fecha_fin,
       }))
     try {
       const clave = `kairo-planificaciones:${emailUsuario}`

@@ -21,6 +21,8 @@ export function agruparHorariosPorMateria(bloques = []) {
       docente: bloque.docente,
       tipo: bloque.tipo,
       opcional: bloque.opcional,
+      fecha_inicio: bloque.fecha_inicio,
+      fecha_fin: bloque.fecha_fin,
     })
   })
 

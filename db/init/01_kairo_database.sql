@@ -127,6 +127,9 @@ CREATE TABLE Horarios (
     Docente             VARCHAR(250)    NULL,
     Tipo                VARCHAR(50)     NOT NULL DEFAULT 'Clase',
     Opcional            BOOLEAN         NOT NULL DEFAULT FALSE,
+    Fecha_Inicio        DATE            NULL,
+    Fecha_Fin           DATE            NULL,
+    CONSTRAINT chk_horarios_fechas CHECK (Fecha_Fin IS NULL OR Fecha_Inicio IS NULL OR Fecha_Fin >= Fecha_Inicio),
     CONSTRAINT chk_horarios_rango CHECK (Hora_Fin > Hora_Inicio),
     CONSTRAINT fk_horarios_tiene FOREIGN KEY (Carrera_Nombre, Materia_Nombre)
         REFERENCES Tiene (Carreras_Nombre, Materias_Nombre)
