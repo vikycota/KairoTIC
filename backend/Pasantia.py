@@ -5,7 +5,6 @@ from conexion import obtener_conexion
 from auth import requiere_login
 from validaciones import (
     ValidationError,
-    validar_email,
     validar_no_vacio,
     validar_longitud,
     detectar_intento_sql_injection,
@@ -22,9 +21,7 @@ def agregar_pasantia():
         return jsonify({"error": "Body inválido o faltante."}), 400
 
     try:
-        email = validar_email(data.get("email"))
-        if email != g.email:
-            return jsonify({"error": "El email no coincide con la sesión."}), 403
+        email = g.email  # la pasantía siempre es de quien tiene la sesión iniciada
 
         empresa = validar_no_vacio(data.get("empresa"), "empresa")
         empresa = validar_longitud(empresa, "empresa", minimo=2, maximo=150)
@@ -81,15 +78,10 @@ def agregar_pasantia():
             conn.close()
 
 
-@pasantia_bp.route("/persona/<string:email>/pasantias", methods=["GET"])
+@pasantia_bp.route("/pasantias", methods=["GET"])
 @requiere_login
-def listar_pasantias(email):
-    try:
-        email = validar_email(email)
-        if email != g.email:
-            return jsonify({"error": "No tenés permiso para consultar estas pasantías."}), 403
-    except ValidationError as e:
-        return jsonify({"error": e.message}), 400
+def listar_pasantias():
+    email = g.email
 
     conn = None
     try:

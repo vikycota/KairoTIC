@@ -1,0 +1,6 @@
+﻿materia,anio_carrera,grupo,dia,hora_inicio,hora_fin,docente,tipo,opcional
+Taller de Escritura Académica,,1,Martes,12:00,13:30,Prof. Benítez,Taller,true
+Taller de Inglés Técnico,,1,Jueves,12:00,13:30,Prof. Harris,Taller,true
+Taller de Liderazgo y Trabajo en Equipo,,1,Viernes,12:00,13:30,Prof. Acosta,Taller,true
+Taller de Introducción a Git,,1,Miércoles,12:00,13:30,Prof. Vega,Taller,true
+Taller de Oratoria,,1,Lunes,12:00,13:30,Prof. Benítez,Taller,true
