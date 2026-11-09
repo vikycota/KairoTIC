@@ -77,18 +77,21 @@ def _previas_sin_aprobar(cur, email, materia):
     """Nombres de las previas de la materia que el usuario todavía no aprobó."""
     cur.execute(
         """
-        SELECT p.Previa_Nombre
-        FROM Previas p
-        WHERE p.Materias_Nombre = %s
+        SELECT m.materia_previa_nombre
+        FROM Materias m
+        WHERE m.Nombre = %s
+          AND m.materia_previa_nombre IS NOT NULL
           AND NOT EXISTS (
               SELECT 1 FROM Hacen h
-              WHERE h.Email = %s AND h.Materias_Nombre = p.Previa_Nombre AND h.Nota >= %s
+              WHERE h.Email = %s
+                AND h.Materias_Nombre = m.materia_previa_nombre
+                AND h.Nota >= %s
           )
-        ORDER BY p.Previa_Nombre
         """,
         (materia, email, NOTA_APROBACION),
     )
-    return [nombre for (nombre,) in cur.fetchall()]
+    fila = cur.fetchone()
+    return [fila[0]] if fila else []
 
 
 def _actualizar_cursada(cur, email, materia):

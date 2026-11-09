@@ -403,6 +403,12 @@ def validar_plan(raw, carrera=None, existentes=None, semestres_existentes=None):
                     pista += " Si son varias previas, separalas con punto y coma (;)."
                 errores.append(f"{ref}: la previa «{previa}» no existe en el plan ni en la base.{pista}")
         m["previas"] = resueltas
+        if len(resueltas) > 1:
+            avisos.append(
+                f"{ref}: se indicaron varias previas; solo se guardarÃ¡ "
+                f"{resueltas[0]}, ya que el plan admite una previa directa."
+            )
+            m["previas"] = resueltas[:1]
 
     ciclo = _detectar_ciclo({m["nombre"]: m["previas"] for m in materias})
     if ciclo:
@@ -429,7 +435,7 @@ def validar_plan(raw, carrera=None, existentes=None, semestres_existentes=None):
         "semestres": len({m["semestre"] for m in materias if m["semestre"]}),
         "sin_semestre": sum(1 for m in materias if not m["semestre"]),
         "con_previas": sum(1 for m in materias if m["previas"]),
-        "total_previas": sum(len(m["previas"]) for m in materias),
+        "total_previas": sum(bool(m["previas"]) for m in materias),
         "categorias": len({m["categoria"] for m in materias if m["categoria"]}),
     }
     return {

@@ -593,8 +593,8 @@ def guardar_previas(
     materias
 ):
     """
-    Guarda todas las previas de cada materia en la tabla Previas,
-    reemplazando las anteriores. Va después de insertar todas las
+    Guarda la previa directa de cada materia en Materias,
+    reemplazando la previa anterior; usa NULL cuando no hay previa.
     materias para no violar la clave foránea.
 
     Devuelve:
@@ -603,40 +603,27 @@ def guardar_previas(
         avisos
     """
 
-    cur.execute(
-        "DELETE FROM Previas WHERE Materias_Nombre = ANY(%s)",
-        ([m["nombre"] for m in materias],),
-    )
-
     total_previas = 0
+    avisos = []
 
     for materia in materias:
-
-        for previa in (
-            materia.get("previas")
-            or []
-        ):
-
-            cur.execute(
-                """
-                INSERT INTO Previas (
-                    Materias_Nombre,
-                    Previa_Nombre
-                )
-                VALUES (%s, %s)
-                ON CONFLICT DO NOTHING
-                """,
-                (
-                    materia["nombre"],
-                    previa
-                ),
-            )
-
+        previas = materia.get("previas") or []
+        previa = previas[0] if previas else None
+        cur.execute(
+            "UPDATE Materias SET materia_previa_nombre = %s WHERE Nombre = %s",
+            (previa, materia["nombre"]),
+        )
+        if previa:
             total_previas += 1
+        if len(previas) > 1:
+            avisos.append(
+                f"{materia['nombre']} tiene {len(previas)} previas; "
+                f"se guardarÃ¡ solo {previa}, ya que el plan admite una previa directa."
+            )
 
     return (
         total_previas,
-        []
+        avisos
     )
 
 
@@ -1150,12 +1137,7 @@ def obtener_plan():
 
                     m.Categoria,
 
-                    ARRAY(
-                        SELECT p.Previa_Nombre
-                        FROM Previas p
-                        WHERE p.Materias_Nombre = m.Nombre
-                        ORDER BY p.Previa_Nombre
-                    ),
+                    m.materia_previa_nombre,
 
                     s.Nombre,
 
@@ -1252,7 +1234,7 @@ def obtener_plan():
                 "semestre":
                     numero_semestre,
 
-                "previas": list(previas),
+                "previas": [previas] if previas else [],
             })
 
 

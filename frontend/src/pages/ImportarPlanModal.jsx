@@ -15,20 +15,52 @@ const esArchivoPdf = (archivo) => Boolean(archivo) && /\.pdf$/i.test(archivo.nam
 /** Da al resultado del PDF la misma forma que la vista previa de /plan/preview. */
 function revisionDesdePdf(plan, nombreCarrera) {
   if (!plan) return null
-  const materias = (plan.semestres ?? []).flatMap((s) =>
+  const filas = (plan.semestres ?? []).flatMap((s) =>
     (s.materias ?? []).map((m) => ({
       semestre: s.numero,
       nombre: m.nombre ?? '',
       creditos: Number(m.creditos) || 0,
       categoria: m.categoria ?? null,
+      codigo: m.codigo ?? null,
       previas: [],
     }))
   )
+  const unicas = new Map()
+  const conflictos = new Map()
+  let duplicadas = 0
+  for (const materia of filas) {
+    const nombre = materia.nombre.trim().replace(/\s+/g, ' ')
+    const clave = nombre.toLocaleLowerCase('es')
+    materia.nombre = nombre
+    if (!clave) continue
+    const anterior = unicas.get(clave)
+    if (!anterior) {
+      unicas.set(clave, materia)
+      continue
+    }
+    duplicadas += 1
+    if (anterior.semestre !== materia.semestre || anterior.creditos !== materia.creditos ||
+        anterior.categoria !== materia.categoria || anterior.codigo !== materia.codigo) {
+      conflictos.set(clave, nombre)
+    }
+  }
+  const materias = [...unicas.entries()]
+    .filter(([clave]) => !conflictos.has(clave))
+    .map(([, materia]) => materia)
+  const errores = [...conflictos.values()].map((nombre) =>
+    `La materia «${nombre}» aparece más de una vez en el PDF con datos incompatibles; corregí el plan antes de importarlo.`
+  )
+  const avisos = materias.length
+    ? ['El PDF no incluye las previas: quedan vacías. Podés completarlas luego con un CSV.']
+    : []
+  if (duplicadas && conflictos.size === 0) {
+    avisos.push(`Se encontraron ${duplicadas} materia(s) repetida(s) en el PDF; se muestra una sola entrada por materia.`)
+  }
   return {
     carrera: nombreCarrera.trim() || plan.carrera || '',
-    valido: materias.length > 0,
-    errores: materias.length ? [] : ['No se detectaron materias en el PDF.'],
-    avisos: materias.length ? ['El PDF no incluye las previas: quedan vacías. Podés completarlas luego con un CSV.'] : [],
+    valido: materias.length > 0 && errores.length === 0,
+    errores: materias.length || errores.length ? errores : ['No se detectaron materias en el PDF.'],
+    avisos,
     materias,
     resumen: {
       materias: materias.length,
