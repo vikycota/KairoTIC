@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import '../pagesCSS/ScheduleImportPanel.css'
 import { apiFetch, EVENTO_CARRERAS_ACTUALIZADAS } from '../api'
-import { fechasSemestre } from './fechasSemestre'
 
 async function leerJson(res) {
   try { return await res.json() } catch { return {} }
@@ -25,7 +24,6 @@ function ScheduleImportPanel({
   const carreraActiva = carrera || carreras[0]?.nombre || ''
   const [anio, setAnio] = useState(String(anioInicial))
   const [semestre, setSemestre] = useState(String(semestreInicial))
-  const [fechas, setFechas] = useState(() => fechasSemestre(anioInicial, semestreInicial))
   const [archivo, setArchivo] = useState(null)
   const [preview, setPreview] = useState(null)
   const [error, setError] = useState('')
@@ -75,9 +73,6 @@ function ScheduleImportPanel({
       const json = await leerJson(res)
       if (!res.ok) throw new Error(json.error || 'No se pudieron cargar los horarios.')
       setBloques(json.bloques ?? [])
-      if (json.bloques?.[0]?.fecha_inicio && json.bloques?.[0]?.fecha_fin) {
-        setFechas({ fecha_inicio: json.bloques[0].fecha_inicio, fecha_fin: json.bloques[0].fecha_fin })
-      }
       onSchedulesLoaded?.(json)
       setErrorCarga('')
     } catch (err) {
@@ -100,8 +95,6 @@ function ScheduleImportPanel({
     data.append('carrera', carreraActiva)
     data.append('anio_lectivo', anio)
     data.append('semestre_lectivo', semestre)
-    data.append('fecha_inicio', fechas.fecha_inicio)
-    data.append('fecha_fin', fechas.fecha_fin)
     return data
   }
 
@@ -183,21 +176,13 @@ function ScheduleImportPanel({
         </label>
         <label>
           <span>Año lectivo</span>
-          <input type="number" min="1900" max="9999" value={anio} onChange={(e) => { setAnio(e.target.value); setFechas(fechasSemestre(e.target.value, semestre)); setPreview(null) }} />
+          <input type="number" min="1900" max="9999" value={anio} onChange={(e) => { setAnio(e.target.value); setPreview(null) }} />
         </label>
         <label>
           <span>Semestre</span>
-          <select value={semestre} onChange={(e) => { setSemestre(e.target.value); setFechas(fechasSemestre(anio, e.target.value)); setPreview(null) }}>
+          <select value={semestre} onChange={(e) => { setSemestre(e.target.value); setPreview(null) }}>
             <option value="1">1</option><option value="2">2</option>
           </select>
-        </label>
-        <label>
-          <span>Inicio de clases</span>
-          <input type="date" required value={fechas.fecha_inicio} onChange={(e) => { setFechas((actual) => ({ ...actual, fecha_inicio: e.target.value })); setPreview(null) }} />
-        </label>
-        <label>
-          <span>Fin de clases</span>
-          <input type="date" required min={fechas.fecha_inicio} value={fechas.fecha_fin} onChange={(e) => { setFechas((actual) => ({ ...actual, fecha_fin: e.target.value })); setPreview(null) }} />
         </label>
         <label className="schedule-file-field">
           <span>Archivo</span>

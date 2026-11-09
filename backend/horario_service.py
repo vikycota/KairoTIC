@@ -2,31 +2,7 @@
 from datetime import date
 
 
-def fechas_semestre(anio, semestre):
-    """Períodos sugeridos; la importación permite precisar las fechas reales."""
-    if semestre == 1:
-        return date(anio, 3, 1), date(anio, 7, 31)
-    return date(anio, 8, 1), date(anio, 12, 31)
-
-
-def validar_fechas(inicio, fin, anio, semestre, errores):
-    if anio is None or semestre is None:
-        return None, None
-    sugerido_inicio, sugerido_fin = fechas_semestre(anio, semestre)
-    try:
-        fecha_inicio = date.fromisoformat(inicio) if inicio else sugerido_inicio
-        fecha_fin = date.fromisoformat(fin) if fin else sugerido_fin
-        if fecha_inicio > fecha_fin:
-            raise ValueError
-        if fecha_inicio.year != anio or fecha_fin.year != anio:
-            raise ValueError
-    except (TypeError, ValueError):
-        errores.append("Las fechas del semestre deben ser válidas, del año lectivo y el inicio no puede superar al fin.")
-        return None, None
-    return fecha_inicio.isoformat(), fecha_fin.isoformat()
-
-
-def validar_metadata(cur, carrera, anio_lectivo, semestre_lectivo, bloques, errores, email, fecha_inicio=None, fecha_fin=None):
+def validar_metadata(cur, carrera, anio_lectivo, semestre_lectivo, bloques, errores, email):
     if not carrera:
         errores.append("No seleccionaste una carrera.")
         carrera = None
@@ -47,7 +23,6 @@ def validar_metadata(cur, carrera, anio_lectivo, semestre_lectivo, bloques, erro
         errores.append("El semestre lectivo debe ser 1 o 2.")
         semestre = None
 
-    inicio, fin = validar_fechas(fecha_inicio, fecha_fin, anio, semestre, errores)
 
     materias_validas = set()
     if carrera:
@@ -72,7 +47,6 @@ def validar_metadata(cur, carrera, anio_lectivo, semestre_lectivo, bloques, erro
         vistos.add(clave)
     resumen = {"bloques": len(bloques), "materias": len({b["materia"] for b in bloques}), "grupos": len({b["grupo"] for b in bloques})}
     return {"valido": not errores, "carrera": carrera, "anio_lectivo": anio, "semestre_lectivo": semestre,
-            "fecha_inicio": inicio, "fecha_fin": fin,
             "bloques": bloques, "errores": errores, "avisos": [], "resumen": resumen}
 
 
@@ -82,18 +56,18 @@ def guardar_horarios(cur, resultado):
     for bloque in resultado["bloques"]:
         cur.execute("""INSERT INTO Horarios
             (Carrera_Nombre, Materia_Nombre, Anio_Lectivo, Semestre_Lectivo, Anio_Carrera, Grupo,
-             Dia, Hora_Inicio, Hora_Fin, Docente, Tipo, Opcional, Fecha_Inicio, Fecha_Fin)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)""",
+             Dia, Hora_Inicio, Hora_Fin, Docente, Tipo, Opcional)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)""",
             (resultado["carrera"], bloque["materia"], resultado["anio_lectivo"], resultado["semestre_lectivo"],
              bloque["anio_carrera"], bloque["grupo"], bloque["dia"], bloque["hora_inicio"], bloque["hora_fin"],
-             bloque["docente"], bloque["tipo"], bloque["opcional"], resultado["fecha_inicio"], resultado["fecha_fin"]))
+             bloque["docente"], bloque["tipo"], bloque["opcional"]))
 
 
 def listar_horarios(cur, carrera, anio_lectivo, semestre_lectivo):
-    cur.execute("""SELECT Materia_Nombre, Anio_Carrera, Grupo, Dia, Hora_Inicio, Hora_Fin, Docente, Tipo, Opcional, Fecha_Inicio, Fecha_Fin
+    cur.execute("""SELECT Materia_Nombre, Anio_Carrera, Grupo, Dia, Hora_Inicio, Hora_Fin, Docente, Tipo, Opcional
         FROM Horarios WHERE Carrera_Nombre = %s AND Anio_Lectivo = %s AND Semestre_Lectivo = %s
         ORDER BY CASE Dia WHEN 'Lunes' THEN 1 WHEN 'Martes' THEN 2 WHEN 'Miércoles' THEN 3
         WHEN 'Jueves' THEN 4 WHEN 'Viernes' THEN 5 WHEN 'Sábado' THEN 6 ELSE 7 END,
         Hora_Inicio, Materia_Nombre, Grupo""", (carrera, anio_lectivo, semestre_lectivo))
-    columnas = ("materia", "anio_carrera", "grupo", "dia", "hora_inicio", "hora_fin", "docente", "tipo", "opcional", "fecha_inicio", "fecha_fin")
+    columnas = ("materia", "anio_carrera", "grupo", "dia", "hora_inicio", "hora_fin", "docente", "tipo", "opcional")
     return [dict(zip(columnas, (v.isoformat(timespec="minutes") if hasattr(v, "isoformat") and not isinstance(v, date) else v.isoformat() if isinstance(v, date) else v for v in fila))) for fila in cur.fetchall()]

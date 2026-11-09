@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { apiFetch, EVENTO_CARRERAS_ACTUALIZADAS } from '../api'
+import { formatearPrevias, normalizarPrevias } from '../utils/previas'
 import '../pagesCSS/ImportarPlan.css'
 
 async function leerJson(res) {
@@ -15,47 +16,42 @@ const esArchivoPdf = (archivo) => Boolean(archivo) && /\.pdf$/i.test(archivo.nam
 /** Da al resultado del PDF la misma forma que la vista previa de /plan/preview. */
 function revisionDesdePdf(plan, nombreCarrera) {
   if (!plan) return null
-  const filas = (plan.semestres ?? []).flatMap((s) =>
-    (s.materias ?? []).map((m) => ({
-      semestre: s.numero,
+  const entradas = Array.isArray(plan.materias)
+    ? plan.materias
+    : (plan.semestres ?? []).flatMap((s) =>
+      (s.materias ?? []).map((m) => ({ ...m, semestre: m.semestre ?? s.numero }))
+    )
+  const materias = entradas.map((m) => ({
+      semestre: m.semestre ?? null,
       nombre: m.nombre ?? '',
       creditos: Number(m.creditos) || 0,
       categoria: m.categoria ?? null,
       codigo: m.codigo ?? null,
-      previas: [],
+      previas: normalizarPrevias(m.previas ?? m.previa),
     }))
-  )
-  const unicas = new Map()
-  const conflictos = new Map()
-  let duplicadas = 0
-  for (const materia of filas) {
+  const vistas = new Map()
+  const errores = []
+  for (const materia of materias) {
     const nombre = materia.nombre.trim().replace(/\s+/g, ' ')
     const clave = nombre.toLocaleLowerCase('es')
     materia.nombre = nombre
     if (!clave) continue
-    const anterior = unicas.get(clave)
+    const anterior = vistas.get(clave)
     if (!anterior) {
-      unicas.set(clave, materia)
+      vistas.set(clave, materia)
       continue
     }
-    duplicadas += 1
     if (anterior.semestre !== materia.semestre || anterior.creditos !== materia.creditos ||
         anterior.categoria !== materia.categoria || anterior.codigo !== materia.codigo) {
-      conflictos.set(clave, nombre)
+      errores.push(`La materia «${nombre}» aparece más de una vez en el PDF con datos incompatibles; corregí el plan antes de importarlo.`)
+    } else {
+      errores.push(`La materia «${nombre}» aparece más de una vez en el PDF; corregí la entrada duplicada antes de importarlo.`)
     }
   }
-  const materias = [...unicas.entries()]
-    .filter(([clave]) => !conflictos.has(clave))
-    .map(([, materia]) => materia)
-  const errores = [...conflictos.values()].map((nombre) =>
-    `La materia «${nombre}» aparece más de una vez en el PDF con datos incompatibles; corregí el plan antes de importarlo.`
-  )
-  const avisos = materias.length
+  const tienePrevias = materias.some((materia) => materia.previas.length > 0)
+  const avisos = materias.length && !tienePrevias
     ? ['El PDF no incluye las previas: quedan vacías. Podés completarlas luego con un CSV.']
     : []
-  if (duplicadas && conflictos.size === 0) {
-    avisos.push(`Se encontraron ${duplicadas} materia(s) repetida(s) en el PDF; se muestra una sola entrada por materia.`)
-  }
   return {
     carrera: nombreCarrera.trim() || plan.carrera || '',
     valido: materias.length > 0 && errores.length === 0,
@@ -65,11 +61,11 @@ function revisionDesdePdf(plan, nombreCarrera) {
     resumen: {
       materias: materias.length,
       creditos_total: materias.reduce((a, m) => a + m.creditos, 0),
-      semestres: new Set(materias.map((m) => m.semestre)).size,
-      con_previas: 0,
-      total_previas: 0,
+      semestres: new Set(materias.map((m) => m.semestre).filter((n) => n != null)).size,
+      con_previas: materias.filter((m) => m.previas.length > 0).length,
+      total_previas: materias.reduce((total, m) => total + m.previas.length, 0),
       categorias: new Set(materias.map((m) => m.categoria).filter(Boolean)).size,
-      sin_semestre: 0,
+      sin_semestre: materias.filter((m) => m.semestre == null).length,
     },
   }
 }
@@ -77,7 +73,7 @@ function revisionDesdePdf(plan, nombreCarrera) {
 function csvDesdeMaterias(materias) {
   const celda = (t) => `"${String(t ?? '').replace(/"/g, '""')}"`
   const filas = ['semestre;materia;creditos;categoria;previas']
-  for (const m of materias) filas.push([m.semestre, celda(m.nombre), m.creditos, celda(m.categoria), ''].join(';'))
+  for (const m of materias) filas.push([m.semestre, celda(m.nombre), m.creditos, celda(m.categoria), celda((m.previas ?? []).join(';'))].join(';'))
   return String.fromCharCode(0xFEFF) + filas.join(String.fromCharCode(13, 10))
 }
 
@@ -322,7 +318,7 @@ function ImportarPlanModal({ abierto, archivoInicial = null, onCerrar, onImporta
                           <td>{m.nombre}</td>
                           <td>{m.creditos}</td>
                           <td>{m.categoria ?? '—'}</td>
-                          <td>{m.previas.length ? m.previas.join(', ') : '—'}</td>
+                          <td>{formatearPrevias(m.previas)}</td>
                         </tr>
                       ))}
                     </tbody>

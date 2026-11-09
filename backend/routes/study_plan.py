@@ -6,7 +6,8 @@ from flask import Blueprint, request, jsonify
 
 from auth import requiere_login
 from pdf_reader import extraer_texto_pdf
-from ollama import interpretar_plan_estudio
+from ollama import PlanPdfRespuestaInvalida, interpretar_plan_estudio
+from pdf_plan import contar_registros, materias_de_plan, registrar_etapa_pdf, resumir_plan
 
 
 study_plan_bp = Blueprint(
@@ -42,6 +43,10 @@ def importar_plan():
     try:
 
         texto = extraer_texto_pdf(archivo)
+        registrar_etapa_pdf(
+            "TEXTO EXTRAIDO PDF",
+            f"Caracteres: {len(texto)}; registros detectados: {contar_registros(texto)}\n{texto}",
+        )
 
         if not texto.strip():
             return jsonify({
@@ -49,8 +54,24 @@ def importar_plan():
             }), 400
 
         plan = interpretar_plan_estudio(texto)
+        materias = materias_de_plan(plan)
+        registrar_etapa_pdf(
+            "MATERIAS NORMALIZADAS",
+            {
+                "TOTAL MATERIAS": len(materias),
+                "SEMESTRES": sorted({m["semestre"] for m in materias if m.get("semestre") is not None}),
+                **resumir_plan(plan),
+                "datos": materias,
+            },
+        )
 
         return jsonify(plan), 200
+
+    except PlanPdfRespuestaInvalida as error:
+        logger.warning("No se pudo interpretar el plan PDF: %s", error)
+        return jsonify({
+            "error": "La IA no devolvio un plan valido. Volve a intentar.",
+        }), 502
 
     except fitz.FileDataError:
         return jsonify({"error": "El archivo no es un PDF válido o está dañado."}), 400
