@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useContador } from '../useContador'
 import { apiFetch } from '../api'
+import { fechasSemestre, estaDentroDelPeriodo } from './fechasSemestre'
 import { calcularCostoSeleccion, crearConfigCosto, etiquetaSemestre, formatearMonto } from './costosSemestre'
 import '../pagesCSS/Calendario.css'
 import '../pagesCSS/CalendarioPago.css'
@@ -215,11 +216,17 @@ function WeeklyPlanner({ emailUsuario, onIr }) {
     })
     return () => { vigente = false }
   }, [emailUsuario, planGuardado])
+  const cargaAnterior = !planGuardado ? leerStorage(`kairo-horarios:${emailUsuario}`) : null
+  const periodoCalendario = planGuardado
+    ? fechasSemestre(planGuardado.anio_lectivo, planGuardado.semestre_lectivo)
+    : cargaAnterior?.anio_lectivo && cargaAnterior?.semestre_lectivo
+      ? fechasSemestre(cargaAnterior.anio_lectivo, cargaAnterior.semestre_lectivo)
+      : null
   const horarios = useMemo(() => (
     planGuardado
       ? planGuardado.bloques.filter((bloque) => bloque.tipo === 'clase')
-      : leerStorage(`kairo-horarios:${emailUsuario}`)?.bloques ?? []
-  ), [emailUsuario, planGuardado])
+      : cargaAnterior?.bloques ?? []
+  ), [planGuardado, cargaAnterior])
   const talleres = useMemo(() => (
     planGuardado
       ? planGuardado.bloques.filter((bloque) => bloque.tipo === 'taller')
@@ -250,10 +257,10 @@ function WeeklyPlanner({ emailUsuario, onIr }) {
     return DIAS.map((dia, i) => {
       const iso = aISO(fechas[i])
       const lista = [
-        ...horarios.filter((b) => b.dia === dia).map((b, k) => ({
+        ...horarios.filter((b) => b.dia === dia && estaDentroDelPeriodo(iso, b, periodoCalendario)).map((b, k) => ({
           id: `c-${dia}-${k}`, tipo: 'clase', titulo: b.nombre, ini: aMin(b.inicio), fin: aMin(b.fin), salon: b.salon, extra: b.extra, grupo: b.grupo, dia,
         })),
-        ...talleres.filter((b) => b.dia === dia).map((b, k) => ({
+        ...talleres.filter((b) => b.dia === dia && estaDentroDelPeriodo(iso, b, periodoCalendario)).map((b, k) => ({
           id: `t-${dia}-${k}`, tipo: 'taller', titulo: b.nombre, ini: aMin(b.inicio), fin: aMin(b.fin), salon: b.salon, extra: b.extra, dia,
         })),
         ...bloques.filter((bloque) => bloqueOcurreEnFecha(bloque, fechas[i])).map((bloque, k) => ({
@@ -266,7 +273,7 @@ function WeeklyPlanner({ emailUsuario, onIr }) {
       ].filter((e) => filtros[e.tipo])
       return distribuir(lista)
     })
-  }, [fechas, horarios, talleres, bloques, personales, filtros])
+  }, [fechas, horarios, talleres, bloques, personales, filtros, periodoCalendario])
 
   const todos = porDia.flat()
   const horaInicio = Math.max(0, Math.min(7, ...todos.map((e) => Math.floor(e.ini / 60))))
@@ -407,7 +414,7 @@ function WeeklyPlanner({ emailUsuario, onIr }) {
               </p>
               <small>{panel.evento.tipo === 'bloque'
                 ? `${etiquetaRepeticion(panel.evento.repeticion)}${panel.evento.fecha_inicio ? ` desde ${panel.evento.fecha_inicio}` : ''}.`
-                : planGuardado ? 'Viene del semestre que guardaste desde Planificar semestre.' : 'Viene de los horarios que cargaste en Cargas y se repite todas las semanas.'}</small>
+                : planGuardado ? 'Viene del semestre que guardaste desde Planificar semestre.' : 'Viene de los horarios cargados y se repite únicamente durante el período de clases.'}</small>
             </div>
             <button type="button" className="cal-cerrar" onClick={() => setPanel(null)} aria-label="Cerrar">×</button>
           </aside>

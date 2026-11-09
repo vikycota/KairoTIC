@@ -1,0 +1,17 @@
+﻿carrera,semestre,materia,creditos,categoria,previas
+Ingeniería en Sistemas Demo,1,Introducción a la Programación,8,Programación,
+Ingeniería en Sistemas Demo,1,Álgebra Lineal,8,Matemática,
+Ingeniería en Sistemas Demo,1,Cálculo I,10,Matemática,
+Ingeniería en Sistemas Demo,1,Fundamentos de Computación,6,Computación,
+Ingeniería en Sistemas Demo,2,Programación Orientada a Objetos,8,Programación,Introducción a la Programación
+Ingeniería en Sistemas Demo,2,Cálculo II,10,Matemática,Cálculo I
+Ingeniería en Sistemas Demo,2,Matemática Discreta,8,Matemática,Álgebra Lineal
+Ingeniería en Sistemas Demo,2,Arquitectura de Computadoras,6,Computación,Fundamentos de Computación
+Ingeniería en Sistemas Demo,3,Estructuras de Datos,8,Programación,Programación Orientada a Objetos
+Ingeniería en Sistemas Demo,3,Bases de Datos I,8,Bases de Datos,Programación Orientada a Objetos
+Ingeniería en Sistemas Demo,3,Probabilidad y Estadística,8,Matemática,Cálculo II
+Ingeniería en Sistemas Demo,3,Sistemas Operativos,8,Computación,Arquitectura de Computadoras
+Ingeniería en Sistemas Demo,4,Redes de Computadoras,8,Computación,Sistemas Operativos
+Ingeniería en Sistemas Demo,4,Bases de Datos II,8,Bases de Datos,Bases de Datos I
+Ingeniería en Sistemas Demo,4,Ingeniería de Software,10,Software,Estructuras de Datos;Bases de Datos I
+Ingeniería en Sistemas Demo,4,Sistemas Distribuidos,8,Computación,Redes de Computadoras

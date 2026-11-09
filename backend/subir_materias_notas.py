@@ -12,7 +12,7 @@ materias_notas_bp = Blueprint("materias_notas", __name__)
 NOTA_MINIMA = Decimal("0")
 NOTA_MAXIMA = Decimal("12")
 
-# Una materia se aprueba con una nota MAYOR a este valor; solo entonces acredita sus créditos.
+# Una materia se aprueba con una nota MAYOR O IGUAL a este valor; solo entonces acredita sus créditos.
 NOTA_APROBACION = Decimal("6")
 
 
@@ -67,10 +67,28 @@ def _carrera_existe(cur, carrera, email):
 
 def _esta_aprobada(cur, email, materia):
     cur.execute(
-        "SELECT 1 FROM Hacen WHERE Email = %s AND Materias_Nombre = %s AND Nota > %s LIMIT 1",
+        "SELECT 1 FROM Hacen WHERE Email = %s AND Materias_Nombre = %s AND Nota >= %s LIMIT 1",
         (email, materia, NOTA_APROBACION),
     )
     return cur.fetchone() is not None
+
+
+def _previas_sin_aprobar(cur, email, materia):
+    """Nombres de las previas de la materia que el usuario todavía no aprobó."""
+    cur.execute(
+        """
+        SELECT p.Previa_Nombre
+        FROM Previas p
+        WHERE p.Materias_Nombre = %s
+          AND NOT EXISTS (
+              SELECT 1 FROM Hacen h
+              WHERE h.Email = %s AND h.Materias_Nombre = p.Previa_Nombre AND h.Nota >= %s
+          )
+        ORDER BY p.Previa_Nombre
+        """,
+        (materia, email, NOTA_APROBACION),
+    )
+    return [nombre for (nombre,) in cur.fetchall()]
 
 
 def _actualizar_cursada(cur, email, materia):
@@ -88,7 +106,7 @@ def _actualizar_cursada(cur, email, materia):
     cur.execute(
         """
         SELECT MIN(Examenes_Fecha) FROM Hacen
-        WHERE Email = %s AND Materias_Nombre = %s AND Nota > %s
+        WHERE Email = %s AND Materias_Nombre = %s AND Nota >= %s
         """,
         (email, materia, NOTA_APROBACION),
     )
@@ -115,8 +133,8 @@ def agregar_examen():
     """
     Registra un examen rendido por el usuario de la sesión.
     Body: {"materia", "nota", "fecha", "carrera"?}. Se pueden cargar todos los intentos.
-    La materia queda aprobada con una nota mayor a NOTA_APROBACION y, una vez aprobada,
-    no admite más exámenes. Si viene "carrera", la materia debe pertenecer a ese plan.
+    La materia queda aprobada con una nota mayor o igual a NOTA_APROBACION y, una vez aprobada,
+    no admite más exámenes. Tampoco se puede rendir si falta aprobar alguna de sus previas. Si viene "carrera", la materia debe pertenecer a ese plan.
     """
     data = request.get_json(silent=True)
     if not isinstance(data, dict):
@@ -158,6 +176,13 @@ def agregar_examen():
             cur.close()
             return jsonify({"error": "Esa materia ya está aprobada: no se pueden agregar más exámenes."}), 409
 
+        faltan = _previas_sin_aprobar(cur, email, materia)
+        if faltan:
+            cur.close()
+            return jsonify({
+                "error": f"No podés rendir {materia}: primero tenés que aprobar " + ", ".join(faltan) + ".",
+            }), 409
+
         cur.execute(
             "SELECT 1 FROM Hacen WHERE Email = %s AND Materias_Nombre = %s AND Examenes_Fecha = %s",
             (email, materia, fecha),
@@ -179,7 +204,7 @@ def agregar_examen():
             "materia": materia,
             "nota": int(nota),
             "fecha": fecha.isoformat(),
-            "aprobada": nota > NOTA_APROBACION,
+            "aprobada": nota >= NOTA_APROBACION,
         }), 201
 
     except Exception as e:
@@ -234,7 +259,7 @@ def listar_examenes():
                 "creditos": c,
                 "nota": int(nota),
                 "fecha": f.isoformat(),
-                "aprobada": nota > NOTA_APROBACION,
+                "aprobada": nota >= NOTA_APROBACION,
             }
             for n, c, nota, f in cur.fetchall()
         ]
@@ -255,7 +280,7 @@ def listar_examenes():
 @materias_notas_bp.route("/progreso", methods=["GET"])
 @requiere_login
 def resumen_progreso():
-    """Solo acreditan las materias con algún examen de nota mayor a NOTA_APROBACION."""
+    """Solo acreditan las materias con algún examen de nota mayor o igual a NOTA_APROBACION."""
     conn = None
     try:
         conn = obtener_conexion()
@@ -265,7 +290,7 @@ def resumen_progreso():
             WITH aprobadas AS (
                 SELECT Materias_Nombre, MAX(Nota) AS nota
                 FROM Hacen
-                WHERE Email = %s AND Nota > %s
+                WHERE Email = %s AND Nota >= %s
                 GROUP BY Materias_Nombre
             )
             SELECT c.Nombre,

@@ -1,0 +1,22 @@
+﻿materia,anio_carrera,grupo,dia,hora_inicio,hora_fin,docente,tipo,opcional
+Introducción a la Programación,1,1,Lunes,08:00,09:40,Prof. Ramírez,Clase,false
+Introducción a la Programación,1,2,Martes,18:00,19:40,Prof. Silva,Clase,false
+Álgebra Lineal,1,1,Lunes,10:00,11:40,Prof. Gómez,Clase,false
+Álgebra Lineal,1,2,Miércoles,18:00,19:40,Prof. Gómez,Clase,false
+Cálculo I,1,1,Martes,08:00,09:40,Prof. Pereira,Clase,false
+Cálculo I,1,1,Jueves,08:00,09:40,Prof. Pereira,Clase,false
+Fundamentos de Computación,1,1,Miércoles,10:00,11:40,Prof. Núñez,Clase,false
+Programación Orientada a Objetos,2,1,Lunes,14:00,15:40,Prof. Ramírez,Clase,false
+Programación Orientada a Objetos,2,1,Miércoles,14:00,15:40,Prof. Ramírez,Práctico,false
+Cálculo II,2,1,Martes,10:00,11:40,Prof. Pereira,Clase,false
+Matemática Discreta,2,1,Jueves,10:00,11:40,Prof. Fernández,Clase,false
+Arquitectura de Computadoras,2,1,Viernes,08:00,09:40,Prof. Díaz,Clase,false
+Estructuras de Datos,3,1,Lunes,16:00,17:40,Prof. Silva,Clase,false
+Bases de Datos I,3,1,Martes,16:00,17:40,Prof. Martínez,Clase,false
+Bases de Datos I,3,1,Jueves,16:00,17:40,Prof. Martínez,Práctico,false
+Probabilidad y Estadística,3,1,Miércoles,16:00,17:40,Prof. Castro,Clase,false
+Sistemas Operativos,3,1,Viernes,10:00,11:40,Prof. Díaz,Clase,false
+Redes de Computadoras,4,1,Lunes,18:00,19:40,Prof. Rojas,Clase,false
+Bases de Datos II,4,1,Martes,18:00,19:40,Prof. Martínez,Clase,false
+Ingeniería de Software,4,1,Jueves,18:00,20:30,Prof. Vega,Clase,false
+Sistemas Distribuidos,4,1,Viernes,14:00,16:00,,Práctico,true

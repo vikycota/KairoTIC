@@ -22,7 +22,8 @@ def _analizar(cur):
     errores = list(errores_parser)
     carrera = (request.form.get("carrera") or "").strip()
     resultado = validar_metadata(cur, carrera, request.form.get("anio_lectivo"),
-                                 request.form.get("semestre_lectivo"), bloques, errores, g.email)
+                                 request.form.get("semestre_lectivo"), bloques, errores, g.email,
+                                 request.form.get("fecha_inicio"), request.form.get("fecha_fin"))
     return resultado
 
 

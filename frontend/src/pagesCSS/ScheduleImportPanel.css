@@ -14,7 +14,10 @@
 .schedule-import-form { display: grid; grid-template-columns: minmax(190px, 1.5fr) repeat(2, minmax(110px, .6fr)) minmax(200px, 1.5fr) auto; align-items: end; gap: 12px; }
 .schedule-import-form label { display: flex; min-width: 0; flex-direction: column; gap: 6px; color: #514a68; font-size: 12px; font-weight: 600; }
 .schedule-import-form input, .schedule-import-form select { min-width: 0; height: 40px; box-sizing: border-box; padding: 8px 10px; border: 1px solid #d9d2f5; border-radius: 9px; background: #fff; color: #302b42; font: 13px 'Inter', sans-serif; }
-.schedule-import-form input[type=file] { padding: 7px; font-size: 11px; }
+.schedule-import-form input[type=file] { padding: 6px; font-size: 12px; color: #706b80; cursor: pointer; }
+.schedule-import-form input[type=file]::file-selector-button { margin-right: 12px; padding: 7px 14px; border: 0; border-radius: 7px; background: #f2effb; color: #5a3fc0; font: 600 12px 'Inter', sans-serif; cursor: pointer; transition: background .15s, color .15s; }
+.schedule-import-form input[type=file]:hover::file-selector-button { background: linear-gradient(90deg, #7c5cfc, #a553c4); color: #fff; }
+.schedule-import-form input[type=file]:focus-visible { outline: 2px solid #7c5cfc; outline-offset: 2px; }
 .schedule-primary, .schedule-secondary { min-height: 40px; padding: 9px 15px; border: 0; border-radius: 9px; font: 600 13px 'Inter', sans-serif; cursor: pointer; }
 .schedule-primary { color: #fff; background: linear-gradient(90deg, #7c5cfc, #a553c4); }
 .schedule-primary:disabled, .schedule-secondary:disabled { cursor: not-allowed; opacity: .5; }

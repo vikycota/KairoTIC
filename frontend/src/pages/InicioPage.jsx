@@ -449,6 +449,7 @@ function CargadorBloques({ tipo, clave, titulo, descripcion, numero, etiqueta, o
           </form>
           {archivoSeleccionado && <p className="schedule-help">Archivo seleccionado: {archivoSeleccionado.name}</p>}
           <p className="schedule-help">Subí un archivo .csv con una fila por bloque: taller, día, inicio, fin, salón y cupos.</p>
+          <p className="schedule-templates">Plantilla: <a href="#plantilla-talleres" onClick={(event) => { event.preventDefault(); descargar(PLANTILLAS[tipo]) }}>CSV para Excel</a></p>
           <Mensajes errores={errores} aviso={errores.length && listo ? 'Se mantuvieron los talleres guardados anteriormente.' : ''} />
           {vistaPrevia && <section className="schedule-preview" aria-label="Vista previa de talleres">
             <div className="schedule-preview-summary">
@@ -468,6 +469,9 @@ function CargadorBloques({ tipo, clave, titulo, descripcion, numero, etiqueta, o
             <div className="schedule-table-wrap"><table className="schedule-table"><thead><tr><th>Taller</th><th>Día</th><th>Horario</th><th>Salón</th><th>Cupos</th></tr></thead><tbody>
               {bloques.map((bloque, indice) => <tr key={`${bloque.nombre}-${bloque.dia}-${bloque.inicio}-${indice}`}><td>{bloque.nombre}</td><td>{bloque.dia}</td><td>{bloque.inicio}–{bloque.fin}</td><td>{bloque.salon || '—'}</td><td>{bloque.extra || '—'}</td></tr>)}
             </tbody></table></div>
+            <div className="schedule-current-actions">
+              <button type="button" className="schedule-danger" onClick={quitar}>Eliminar talleres de este semestre ({semestre})</button>
+            </div>
           </div>}
         </>
       )}
@@ -480,12 +484,12 @@ function CargadorBloques({ tipo, clave, titulo, descripcion, numero, etiqueta, o
       />}
       {tipo !== 'talleres' && <Mensajes errores={errores} aviso={errores.length && listo ? 'Se mantuvo el archivo cargado anteriormente.' : ''} />}
       {tipo !== 'talleres' && listo && <VistaSemana bloques={bloques} tipo={tipo} />}
-      <footer className="inicio-acciones">
+      {tipo !== 'talleres' && <footer className="inicio-acciones">
         <button type="button" className="inicio-enlace" onClick={() => descargar(PLANTILLAS[tipo])}>
           Descargar plantilla
         </button>
-        {listo && <button type="button" className="inicio-enlace inicio-enlace--peligro" onClick={quitar}>{tipo === 'talleres' ? 'Quitar talleres de este semestre' : 'Quitar'}</button>}
-      </footer>
+        {listo && <button type="button" className="inicio-enlace inicio-enlace--peligro" onClick={quitar}>Quitar</button>}
+      </footer>}
     </Tarjeta>
   )
 }
@@ -552,9 +556,10 @@ function CargadorHorarios({ clave, titulo, descripcion, numero, onListo }) {
           onSchedulesLoaded={sincronizarCalendario}
           permitirEliminar
           onSchedulesDeleted={quitarDelCalendario}
-        />
+        >
+          {listo && <VistaSemana bloques={bloques} tipo="horarios" />}
+        </ScheduleImportPanel>
       </div>
-      {listo && <VistaSemana bloques={bloques} tipo="horarios" />}
     </Tarjeta>
   )
 }
@@ -640,6 +645,7 @@ function InicioPage({ nombreUsuario, emailUsuario, onIr }) {
     talleres: (v) => setListos((l) => (l.talleres === v ? l : { ...l, talleres: v })),
   }), [])
   const progreso = Object.values(listos).filter(Boolean).length
+  const planificarBloqueado = !listos.plan || !listos.horarios
 
   return (
     <div className="inicio-page">
@@ -658,6 +664,12 @@ function InicioPage({ nombreUsuario, emailUsuario, onIr }) {
           <div className="inicio-dato inicio-dato--barra" aria-label={`${progreso} de 3 pasos completados`}>
             <span>Avance</span>
             <div className="inicio-avance-barra"><span style={{ width: `${(progreso / 3) * 100}%` }} /></div>
+          </div>
+          <div className="inicio-planificar">
+            <button type="button" className="inicio-btn-planificar" disabled={planificarBloqueado} onClick={() => onIr?.('planificar')}>
+              Planificar semestre <span aria-hidden="true">→</span>
+            </button>
+            {planificarBloqueado && <span>Cargá al menos el plan y los horarios para continuar.</span>}
           </div>
         </div>
       </header>
@@ -683,12 +695,6 @@ function InicioPage({ nombreUsuario, emailUsuario, onIr }) {
           />
         </div>
 
-        <footer className="inicio-pie">
-          <button type="button" className="inicio-btn" disabled={!listos.plan || !listos.horarios} onClick={() => onIr?.('planificar')}>
-            Planificar semestre →
-          </button>
-          {(!listos.plan || !listos.horarios) && <span>Cargá al menos el plan y los horarios para continuar.</span>}
-        </footer>
       </div>
     </div>
   )
