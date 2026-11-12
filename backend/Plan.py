@@ -608,12 +608,15 @@ def guardar_previas(
 
     for materia in materias:
         previas = materia.get("previas") or []
-        previa = previas[0] if previas else None
         cur.execute(
-            "UPDATE Materias SET materia_previa_nombre = %s WHERE Nombre = %s",
-            (previa, materia["nombre"]),
+            "DELETE FROM Previas WHERE Materias_Nombre = %s",
+            (materia["nombre"],),
         )
-        if previa:
+        for previa in previas:
+            cur.execute(
+                "INSERT INTO Previas (Materias_Nombre, Previa_Nombre) VALUES (%s, %s)",
+                (materia["nombre"], previa),
+            )
             total_previas += 1
         if len(previas) > 1:
             avisos.append(
@@ -1137,7 +1140,12 @@ def obtener_plan():
 
                     m.Categoria,
 
-                    m.materia_previa_nombre,
+                    ARRAY(
+                        SELECT p.Previa_Nombre
+                        FROM Previas p
+                        WHERE p.Materias_Nombre = m.Nombre
+                        ORDER BY p.Previa_Nombre
+                    ),
 
                     s.Nombre,
 
@@ -1234,7 +1242,7 @@ def obtener_plan():
                 "semestre":
                     numero_semestre,
 
-                "previas": [previas] if previas else [],
+                "previas": previas or [],
             })
 
 
